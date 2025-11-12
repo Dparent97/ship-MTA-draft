@@ -90,23 +90,27 @@ class Config:
         'Completed Review',
     ]
     
-    # Email/SMS Notifications (optional)
+    # SMS Notifications via Twilio
     ENABLE_NOTIFICATIONS = os.environ.get('ENABLE_NOTIFICATIONS', 'False').lower() == 'true'
-    SMTP_SERVER = os.environ.get('SMTP_SERVER')
-    SMTP_PORT = os.environ.get('SMTP_PORT', 587)
-    SMTP_USERNAME = os.environ.get('SMTP_USERNAME')
-    SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
-    NOTIFICATION_FROM_EMAIL = os.environ.get('NOTIFICATION_FROM_EMAIL')
-    
-    # Crew email mapping (for notifications)
-    CREW_EMAILS = {
-        'DP': os.environ.get('DP_EMAIL'),
-        'AL': os.environ.get('AL_EMAIL'),
-        'Kaitlyn': os.environ.get('KAITLYN_EMAIL'),
-        'Mark': os.environ.get('MARK_EMAIL'),
-        'Art': os.environ.get('ART_EMAIL'),
-        'D2': os.environ.get('D2_EMAIL'),
-        'Zach': os.environ.get('ZACH_EMAIL'),
-        'Maverick': os.environ.get('MAVERICK_EMAIL'),
-        'Rhyan': os.environ.get('RHYAN_EMAIL'),
+
+    # Twilio credentials
+    TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID')
+    TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN')
+    TWILIO_FROM_NUMBER = os.environ.get('TWILIO_FROM_NUMBER')
+
+    # Base URL for crew login page (used in SMS messages)
+    CREW_LOGIN_URL = os.environ.get('CREW_LOGIN_URL', 'http://localhost:5000/crew/login')
+
+    # Crew phone number mapping (for SMS notifications)
+    # Format: E.164 (e.g., +1234567890)
+    CREW_PHONES = {
+        'DP': os.environ.get('DP_PHONE'),
+        'AL': os.environ.get('AL_PHONE'),
+        'Kaitlyn': os.environ.get('KAITLYN_PHONE'),
+        'Mark': os.environ.get('MARK_PHONE'),
+        'Art': os.environ.get('ART_PHONE'),
+        'D2': os.environ.get('D2_PHONE'),
+        'Zach': os.environ.get('ZACH_PHONE'),
+        'Maverick': os.environ.get('MAVERICK_PHONE'),
+        'Rhyan': os.environ.get('RHYAN_PHONE'),
     }

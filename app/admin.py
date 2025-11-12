@@ -3,6 +3,7 @@ from app import db
 from app.models import WorkItem, StatusHistory, Comment
 from app.docx_generator import generate_docx, generate_multiple_docx
 from app.utils import format_datetime, allowed_file, generate_unique_filename, resize_image
+from app.notifications import send_assignment_notification
 from datetime import datetime
 import os
 import zipfile
@@ -211,11 +212,11 @@ def assign_item(item_id):
             db.session.add(history)
         
         db.session.commit()
-        
-        # TODO: Send notification if enabled
-        # if assigned_to and current_app.config.get('ENABLE_NOTIFICATIONS'):
-        #     send_assignment_notification(work_item, assigned_to, revision_notes)
-        
+
+        # Send SMS notification if enabled and crew member is assigned
+        if assigned_to and current_app.config.get('ENABLE_NOTIFICATIONS'):
+            send_assignment_notification(work_item, assigned_to, revision_notes)
+
         flash(f'Assignment updated successfully!', 'success')
     except Exception as e:
         db.session.rollback()
