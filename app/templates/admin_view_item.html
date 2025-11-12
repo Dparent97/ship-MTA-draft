@@ -56,36 +56,34 @@
                 
                     <!-- Photos -->
                     <div class="mb-4">
-                        <h5>Photos ({{ work_item.photos|length }})</h5>
+                        <h5>📷 Photos ({{ work_item.photos|length }})</h5>
                         <div class="row g-3">
                             {% for photo in work_item.photos %}
-                            <div class="col-md-6">
+                            <div class="col-md-6 col-12">
                                 <div class="card">
-                                    <img src="{{ url_for('admin.serve_upload', filename=photo.filename) }}" 
+                                    <img src="{{ url_for('admin.serve_upload', filename=photo.filename) }}"
                                          class="card-img-top" alt="Photo {{ loop.index }}"
-                                         style="max-height: 300px; object-fit: cover;">
+                                         style="max-height: 300px; object-fit: cover; cursor: pointer;"
+                                         onclick="this.style.maxHeight = this.style.maxHeight === '300px' ? 'none' : '300px'">
                                     <div class="card-body">
-                                        <label class="form-label"><small><strong>Photo {{ loop.index }} Caption:</strong></small></label>
+                                        <label class="form-label"><strong>Photo {{ loop.index }} Caption:</strong></label>
                                         <input type="hidden" name="photo_ids[]" value="{{ photo.id }}">
-                                        <input type="text" class="form-control form-control-sm mb-2" 
-                                               name="photo_captions[]" value="{{ photo.caption }}">
-                                        <div class="d-grid gap-1">
-                                            <a href="{{ url_for('admin.download_photo', item_id=work_item.id, photo_id=photo.id) }}" 
-                                               class="btn btn-sm btn-outline-primary">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
-                                                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                                                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-                                                </svg>
-                                                Download
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                    onclick="if(confirm('Delete this photo?')) { window.location.href='{{ url_for('admin.delete_photo', item_id=work_item.id, photo_id=photo.id) }}'; }">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
-                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                                                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                                                </svg>
-                                                Delete
-                                            </button>
+                                        <input type="text" class="form-control mb-3"
+                                               name="photo_captions[]" value="{{ photo.caption }}"
+                                               placeholder="Add caption...">
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <a href="{{ url_for('admin.download_photo', item_id=work_item.id, photo_id=photo.id) }}"
+                                                   class="btn btn-sm btn-outline-primary w-100">
+                                                    📥 Download
+                                                </a>
+                                            </div>
+                                            <div class="col-6">
+                                                <button type="button" class="btn btn-sm btn-outline-danger w-100"
+                                                        onclick="if(confirm('Delete this photo?')) { window.location.href='{{ url_for('admin.delete_photo', item_id=work_item.id, photo_id=photo.id) }}'; }">
+                                                    🗑️ Delete
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -96,34 +94,44 @@
                     
                     <!-- Add New Photos Section -->
                     <div class="mb-4">
-                        <h5>Add New Photos</h5>
+                        <h5>📸 Add New Photos</h5>
+                        <p class="text-muted small">Tap to use camera or choose from gallery</p>
                         <div class="card bg-light">
                             <div class="card-body">
                                 <div id="newPhotoContainer">
                                     <!-- New photo inputs will be added here -->
                                 </div>
-                                <button type="button" class="btn btn-sm btn-secondary" id="addNewPhotoBtn">
-                                    + Add Photo
+                                <button type="button" class="btn btn-secondary w-100" id="addNewPhotoBtn">
+                                    📷 Add Photo
                                 </button>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Save Button -->
-                    <div class="d-grid gap-2 mt-4">
-                        <button type="submit" class="btn btn-success btn-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-check-circle" viewBox="0 0 16 16">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                                <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
-                            </svg>
-                            Save All Changes
-                        </button>
+                    <!-- Save Button - Desktop -->
+                    <div class="d-none d-md-block">
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-check-circle" viewBox="0 0 16 16">
+                                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                                    <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+                                </svg>
+                                Save All Changes
+                            </button>
+                        </div>
                     </div>
                 </form>
+
+                <!-- Mobile Fixed Bottom Save Button -->
+                <div class="d-md-none mobile-fixed-bottom">
+                    <button type="submit" form="editForm" class="btn btn-success btn-lg w-100">
+                        ✓ Save All Changes
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-    
+
     <!-- Sidebar Actions -->
     <div class="col-lg-4">
         <!-- Status Card -->
@@ -294,22 +302,44 @@
 <script>
 let newPhotoCount = 0;
 
+// Add class to body for mobile fixed bottom padding
+if (window.innerWidth < 768) {
+    document.body.classList.add('has-fixed-bottom');
+}
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    if (window.innerWidth < 768) {
+        document.body.classList.add('has-fixed-bottom');
+    } else {
+        document.body.classList.remove('has-fixed-bottom');
+    }
+});
+
 document.getElementById('addNewPhotoBtn').addEventListener('click', function() {
     newPhotoCount++;
     const photoDiv = document.createElement('div');
-    photoDiv.className = 'mb-3';
+    photoDiv.className = 'mb-3 card';
     photoDiv.id = `new-photo-${newPhotoCount}`;
     photoDiv.innerHTML = `
-        <div class="row">
-            <div class="col-md-6 mb-2">
-                <label class="form-label">New Photo ${newPhotoCount}</label>
-                <input type="file" class="form-control form-control-sm" name="new_photos[]" 
-                       accept="image/jpeg,image/jpg,image/png,image/heic,image/heif">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <label class="form-label">📷 New Photo ${newPhotoCount}</label>
+                    <input type="file" class="form-control" name="new_photos[]"
+                           accept="image/jpeg,image/jpg,image/png,image/heic,image/heif"
+                           capture="environment">
+                    <small class="form-text text-muted">Tap to use camera or choose from gallery</small>
+                </div>
+                <div class="col-12 mb-2">
+                    <label class="form-label">Caption (Optional)</label>
+                    <input type="text" class="form-control" name="new_photo_captions[]"
+                           placeholder="Describe what this photo shows">
+                </div>
             </div>
-            <div class="col-md-6 mb-2">
-                <label class="form-label">Caption</label>
-                <input type="text" class="form-control form-control-sm" name="new_photo_captions[]">
-            </div>
+            <button type="button" class="btn btn-sm btn-danger w-100" onclick="this.closest('.card').remove()">
+                🗑️ Remove Photo ${newPhotoCount}
+            </button>
         </div>
     `;
     document.getElementById('newPhotoContainer').appendChild(photoDiv);
