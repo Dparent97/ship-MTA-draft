@@ -24,6 +24,10 @@ class WorkItem(db.Model):
     last_modified_by = db.Column(db.String(100))
     last_modified_at = db.Column(db.DateTime)
 
+    # Admin Notes (internal only)
+    admin_notes = db.Column(db.Text)
+    admin_notes_updated_at = db.Column(db.DateTime)
+
     # Relationships
     photos = db.relationship('Photo', backref='work_item', lazy=True, cascade='all, delete-orphan')
     comments = db.relationship('Comment', backref='work_item', lazy=True, cascade='all, delete-orphan')

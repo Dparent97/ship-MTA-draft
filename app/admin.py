@@ -317,3 +317,23 @@ def delete_item(item_id):
 
     flash(f'Work item {work_item.item_number} deleted', 'success')
     return redirect(url_for('admin.dashboard'))
+
+
+@bp.route('/save-admin-notes/<int:item_id>', methods=['POST'])
+@admin_required
+def save_admin_notes(item_id):
+    """Save admin notes for a work item (admin only)."""
+    work_item = WorkItem.query.get_or_404(item_id)
+
+    try:
+        admin_notes = request.form.get('admin_notes', '')
+        work_item.admin_notes = admin_notes
+        work_item.admin_notes_updated_at = datetime.utcnow()
+
+        db.session.commit()
+        flash('Admin notes saved successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error saving admin notes: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.view_item', item_id=item_id))
