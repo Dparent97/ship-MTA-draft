@@ -2,6 +2,8 @@
 body {
     font-family: 'Calibri', 'Segoe UI', Tahoma, sans-serif;
     background-color: #f8f9fa;
+    font-size: 16px; /* Minimum readable size without zooming */
+    line-height: 1.5;
 }
 
 .card {
@@ -13,17 +15,34 @@ body {
     border-radius: 8px 8px 0 0 !important;
 }
 
-/* Large touch-friendly buttons for mobile */
-@media (max-width: 768px) {
-    .btn-lg {
-        padding: 1rem;
-        font-size: 1.1rem;
-    }
-    
-    .form-control-lg, .form-select-lg {
-        padding: 0.75rem;
-        font-size: 1.1rem;
-    }
+/* Ensure all touch targets are at least 44x44px */
+.btn,
+.form-control,
+.form-select,
+.btn-check + .btn {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+}
+
+.btn-sm {
+    min-height: 38px;
+    padding: 0.5rem 0.75rem;
+}
+
+.btn-lg {
+    min-height: 50px;
+    padding: 1rem 1.5rem;
+    font-size: 1.1rem;
+}
+
+/* Form controls */
+.form-control, .form-select {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+}
+
+.form-control-lg, .form-select-lg {
+    padding: 0.875rem 1rem;
+    font-size: 1.1rem;
 }
 
 /* Photo input styling */
@@ -38,21 +57,305 @@ body {
     font-weight: 500;
 }
 
-/* Table improvements for mobile */
-@media (max-width: 768px) {
-    .table-responsive {
-        font-size: 0.9rem;
-    }
-    
-    .btn-group-sm .btn {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8rem;
-    }
-}
-
 /* Loading spinner */
 .spinner-border-sm {
     width: 1rem;
     height: 1rem;
 }
 
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+    /* Increase base font size for better readability */
+    body {
+        font-size: 16px;
+    }
+
+    /* Container padding */
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    /* Card spacing */
+    .card {
+        margin-bottom: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
+    /* Form controls - larger for touch */
+    .form-control,
+    .form-select {
+        font-size: 16px;
+        padding: 0.875rem;
+        min-height: 48px;
+    }
+
+    textarea.form-control {
+        min-height: 100px;
+    }
+
+    /* Buttons - larger touch targets */
+    .btn {
+        min-height: 48px;
+        padding: 0.875rem 1rem;
+        font-size: 1rem;
+    }
+
+    .btn-lg {
+        min-height: 54px;
+        padding: 1rem 1.5rem;
+        font-size: 1.125rem;
+    }
+
+    .btn-sm {
+        min-height: 44px;
+        padding: 0.625rem 0.875rem;
+        font-size: 0.9rem;
+    }
+
+    /* Button groups - stack vertically on mobile */
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .btn-group > .btn,
+    .btn-group > .btn-check + .btn {
+        width: 100%;
+        border-radius: 0.375rem !important;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Keep horizontal button groups for mode selection */
+    .btn-group[role="group"] {
+        flex-direction: row;
+    }
+
+    .btn-group[role="group"] > .btn,
+    .btn-group[role="group"] > .btn-check + .btn {
+        flex: 1;
+        margin-bottom: 0;
+    }
+
+    /* Table improvements - hide on mobile, show card layout instead */
+    .table-responsive {
+        font-size: 0.9rem;
+        border: none;
+    }
+
+    /* Mobile table cards */
+    .mobile-table-card {
+        display: block;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background: white;
+    }
+
+    .mobile-table-card .mobile-card-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .mobile-table-card .mobile-card-row:last-child {
+        border-bottom: none;
+    }
+
+    .mobile-table-card .mobile-card-label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+
+    .mobile-table-card .mobile-card-value {
+        text-align: right;
+        font-size: 0.875rem;
+    }
+
+    .mobile-table-card .mobile-card-actions {
+        margin-top: 1rem;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .mobile-table-card .mobile-card-actions .btn {
+        flex: 1;
+    }
+
+    /* Photo upload - camera icon and better touch target */
+    input[type="file"] {
+        min-height: 48px;
+        padding: 0.75rem;
+        font-size: 16px;
+    }
+
+    /* Photo preview cards */
+    .card img {
+        border-radius: 0.375rem;
+    }
+
+    /* Better spacing for photo cards on mobile */
+    .row.g-3 > [class*='col-'] {
+        margin-bottom: 1rem;
+    }
+
+    /* Navbar adjustments */
+    .navbar-brand {
+        font-size: 1rem;
+    }
+
+    /* Alert improvements */
+    .alert {
+        font-size: 0.9rem;
+        padding: 0.875rem;
+    }
+
+    /* Fixed bottom action bar for mobile */
+    .mobile-fixed-bottom {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 1rem;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        z-index: 1000;
+    }
+
+    /* Add padding to body when fixed bottom is present */
+    body.has-fixed-bottom {
+        padding-bottom: 80px;
+    }
+
+    /* Improve form labels */
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+    }
+
+    /* Small text readability */
+    small, .small, .form-text {
+        font-size: 0.875rem;
+        line-height: 1.4;
+    }
+
+    /* Card headers */
+    .card-header h3,
+    .card-header h4,
+    .card-header h5 {
+        font-size: 1.25rem;
+        margin-bottom: 0;
+    }
+
+    /* Improve checkbox and radio button touch targets */
+    .form-check-input {
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-top: 0.125rem;
+    }
+
+    .form-check-label {
+        padding-left: 0.5rem;
+    }
+
+    /* Badge sizing */
+    .badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* Spacing improvements */
+    .mb-3 {
+        margin-bottom: 1.5rem !important;
+    }
+
+    .mb-4 {
+        margin-bottom: 2rem !important;
+    }
+
+    /* Grid columns stack on mobile */
+    .row > [class*='col-'] {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Landscape mode optimizations */
+@media (max-width: 768px) and (orientation: landscape) {
+    /* Reduce vertical padding in landscape */
+    .card-body {
+        padding: 0.75rem;
+    }
+
+    .mb-3 {
+        margin-bottom: 1rem !important;
+    }
+
+    .mb-4 {
+        margin-bottom: 1.25rem !important;
+    }
+
+    /* Smaller headers in landscape */
+    .card-header h3,
+    .card-header h4,
+    .card-header h5 {
+        font-size: 1.1rem;
+    }
+
+    /* Adjust fixed bottom bar */
+    .mobile-fixed-bottom {
+        padding: 0.75rem 1rem;
+    }
+
+    body.has-fixed-bottom {
+        padding-bottom: 70px;
+    }
+}
+
+/* Tablet styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+    /* Slightly larger than mobile, smaller than desktop */
+    .btn {
+        min-height: 44px;
+    }
+
+    .form-control,
+    .form-select {
+        font-size: 16px;
+    }
+}
+
+/* Prevent text selection on buttons (better for touch) */
+.btn {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Improve touch feedback */
+.btn:active,
+.card:active {
+    transform: scale(0.98);
+    transition: transform 0.1s;
+}
+
+/* Photo grid responsive */
+.photo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .photo-grid {
+        grid-template-columns: 1fr;
+    }
+}

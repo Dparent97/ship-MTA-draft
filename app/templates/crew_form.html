@@ -132,25 +132,37 @@
                     <hr class="my-4">
                     
                     <!-- Photos Section -->
-                    <h5 class="mb-3">Photos (Optional, Maximum {{ max_photos }})</h5>
-                    
+                    <h5 class="mb-3">📸 Photos (Optional, Maximum {{ max_photos }})</h5>
+                    <p class="text-muted small mb-3">
+                        Tip: Use your device's camera to capture photos directly
+                    </p>
+
                     <div id="photoContainer">
                         <!-- Photo inputs will be added dynamically -->
                     </div>
-                    
-                    <button type="button" class="btn btn-secondary mb-3" id="addPhotoBtn">
-                        + Add Photo
+
+                    <button type="button" class="btn btn-secondary mb-3 w-100" id="addPhotoBtn">
+                        📷 Add Photo
                     </button>
-                    
+
                     <hr class="my-4">
-                    
-                    <!-- Submit Button -->
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            Submit Work Item
-                        </button>
+
+                    <!-- Submit Button - Desktop -->
+                    <div class="d-none d-md-block">
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                ✓ Submit Work Item
+                            </button>
+                        </div>
                     </div>
                 </form>
+
+                <!-- Mobile Fixed Bottom Submit Button -->
+                <div class="d-md-none mobile-fixed-bottom">
+                    <button type="submit" form="workItemForm" class="btn btn-primary btn-lg w-100">
+                        ✓ Submit Work Item
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -159,6 +171,20 @@
 
 {% block extra_js %}
 <script>
+// Add class to body for mobile fixed bottom padding
+if (window.innerWidth < 768) {
+    document.body.classList.add('has-fixed-bottom');
+}
+
+// Handle window resize
+window.addEventListener('resize', function() {
+    if (window.innerWidth < 768) {
+        document.body.classList.add('has-fixed-bottom');
+    } else {
+        document.body.classList.remove('has-fixed-bottom');
+    }
+});
+
 // Load assignment function
 function loadAssignment(itemId) {
     fetch(`/crew/load-assignment/${itemId}`)
@@ -238,7 +264,7 @@ function addPhotoInput() {
         alert(`Maximum ${maxPhotos} photos allowed`);
         return;
     }
-    
+
     photoCount++;
     const photoDiv = document.createElement('div');
     photoDiv.className = 'card mb-3 photo-input';
@@ -246,23 +272,25 @@ function addPhotoInput() {
     photoDiv.innerHTML = `
         <div class="card-body">
             <div class="row">
-                <div class="col-md-6 mb-2">
-                    <label class="form-label">Photo ${photoCount}</label>
-                    <input type="file" class="form-control" name="photos" 
-                           accept="image/jpeg,image/jpg,image/png,image/heic,image/heif">
+                <div class="col-12 mb-3">
+                    <label class="form-label">📷 Photo ${photoCount}</label>
+                    <input type="file" class="form-control" name="photos"
+                           accept="image/jpeg,image/jpg,image/png,image/heic,image/heif"
+                           capture="environment">
+                    <small class="form-text text-muted">Tap to use camera or choose from gallery</small>
                 </div>
-                <div class="col-md-6 mb-2">
-                    <label class="form-label">Photo ${photoCount} Caption (Optional)</label>
-                    <input type="text" class="form-control" name="photo_captions" 
+                <div class="col-12 mb-2">
+                    <label class="form-label">Caption (Optional)</label>
+                    <input type="text" class="form-control" name="photo_captions"
                            placeholder="Describe what this photo shows">
                 </div>
             </div>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removePhoto(${photoCount})">
-                Remove Photo ${photoCount}
+            <button type="button" class="btn btn-sm btn-danger w-100" onclick="removePhoto(${photoCount})">
+                🗑️ Remove Photo ${photoCount}
             </button>
         </div>
     `;
-    
+
     document.getElementById('photoContainer').appendChild(photoDiv);
     updateAddPhotoButton();
 }

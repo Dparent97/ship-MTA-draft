@@ -55,8 +55,8 @@
     </div>
 </div>
 
-<!-- Work Items Table -->
-<div class="table-responsive">
+<!-- Work Items Table - Desktop View -->
+<div class="table-responsive d-none d-md-block">
     <table class="table table-hover">
         <thead class="table-light">
             <tr>
@@ -76,7 +76,7 @@
             {% for item in work_items %}
             <tr>
                 <td>
-                    <input type="checkbox" class="form-check-input item-checkbox" 
+                    <input type="checkbox" class="form-check-input item-checkbox"
                            value="{{ item.id }}" form="batchForm" name="item_ids[]">
                 </td>
                 <td><strong>{{ item.item_number }}</strong></td>
@@ -85,7 +85,7 @@
                 <td>{{ item.submitter_name }}</td>
                 <td><small>{{ format_datetime(item.submitted_at) }}</small></td>
                 <td>
-                    <span class="badge 
+                    <span class="badge
                         {% if item.status == 'Submitted' %}bg-primary
                         {% elif item.status == 'In Review by DP' %}bg-warning text-dark
                         {% elif item.status == 'In Review by AL' %}bg-warning text-dark
@@ -98,11 +98,11 @@
                 </td>
                 <td>
                     <div class="btn-group btn-group-sm">
-                        <a href="{{ url_for('admin.view_item', item_id=item.id) }}" 
+                        <a href="{{ url_for('admin.view_item', item_id=item.id) }}"
                            class="btn btn-outline-primary" title="View Details">
                             View
                         </a>
-                        <a href="{{ url_for('admin.download_single', item_id=item.id) }}" 
+                        <a href="{{ url_for('admin.download_single', item_id=item.id) }}"
                            class="btn btn-outline-success" title="Download .docx">
                             Download
                         </a>
@@ -118,6 +118,67 @@
             {% endfor %}
         </tbody>
     </table>
+</div>
+
+<!-- Work Items Cards - Mobile View -->
+<div class="d-md-none">
+    {% for item in work_items %}
+    <div class="mobile-table-card">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h6 class="mb-1"><strong>{{ item.item_number }}</strong></h6>
+                <span class="badge
+                    {% if item.status == 'Submitted' %}bg-primary
+                    {% elif item.status == 'In Review by DP' %}bg-warning text-dark
+                    {% elif item.status == 'In Review by AL' %}bg-warning text-dark
+                    {% elif item.status == 'Needs Revision' %}bg-danger
+                    {% elif item.status == 'Awaiting Photos' %}bg-info
+                    {% elif item.status == 'Completed Review' %}bg-success
+                    {% else %}bg-secondary{% endif %}">
+                    {{ item.status }}
+                </span>
+            </div>
+            <input type="checkbox" class="form-check-input item-checkbox"
+                   value="{{ item.id }}" form="batchForm" name="item_ids[]"
+                   style="width: 1.5rem; height: 1.5rem;">
+        </div>
+
+        <div class="mobile-card-row">
+            <span class="mobile-card-label">Description:</span>
+            <span class="mobile-card-value">{{ item.description[:40] }}{% if item.description|length > 40 %}...{% endif %}</span>
+        </div>
+
+        <div class="mobile-card-row">
+            <span class="mobile-card-label">Location:</span>
+            <span class="mobile-card-value">{{ item.location[:30] }}{% if item.location|length > 30 %}...{% endif %}</span>
+        </div>
+
+        <div class="mobile-card-row">
+            <span class="mobile-card-label">Submitter:</span>
+            <span class="mobile-card-value">{{ item.submitter_name }}</span>
+        </div>
+
+        <div class="mobile-card-row">
+            <span class="mobile-card-label">Date:</span>
+            <span class="mobile-card-value"><small>{{ format_datetime(item.submitted_at) }}</small></span>
+        </div>
+
+        <div class="mobile-card-actions">
+            <a href="{{ url_for('admin.view_item', item_id=item.id) }}"
+               class="btn btn-primary">
+                👁️ View
+            </a>
+            <a href="{{ url_for('admin.download_single', item_id=item.id) }}"
+               class="btn btn-success">
+                📥 Download
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-4">
+        No work items found
+    </div>
+    {% endfor %}
 </div>
 {% endblock %}
 
