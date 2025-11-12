@@ -3,12 +3,36 @@ from datetime import timedelta
 
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///maintenance.db'
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Flask Environment
+    FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
 
-    UPLOAD_FOLDER = 'uploads'
-    GENERATED_DOCS_FOLDER = 'generated_docs'
+    # Security
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+
+    # Ensure SECRET_KEY is set in production
+    if FLASK_ENV == 'production' and SECRET_KEY == 'dev-secret-key-change-in-production':
+        raise ValueError("SECRET_KEY must be set in production environment!")
+
+    # Database Configuration
+    database_url = os.environ.get('DATABASE_URL') or 'sqlite:///maintenance.db'
+
+    # Railway provides DATABASE_URL starting with postgres://
+    # but SQLAlchemy 1.4+ requires postgresql://
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+    SQLALCHEMY_DATABASE_URI = database_url
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,
+        'pool_recycle': 300,
+    }
+
+    # File Upload Configuration
+    # Use absolute paths in production for Railway volumes
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or os.path.join(BASE_DIR, 'uploads')
+    GENERATED_DOCS_FOLDER = os.environ.get('GENERATED_DOCS_FOLDER') or os.path.join(BASE_DIR, 'generated_docs')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'heic', 'heif'}
 
