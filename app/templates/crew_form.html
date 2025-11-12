@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Work Item{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        {% if assigned_items %}
+        <div class="card shadow mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">📋 Your Assigned Items ({{ assigned_items|length }})</h4>
+            </div>
+            <div class="card-body">
+                {% for item in assigned_items %}
+                <div class="card mb-3 border-warning">
+                    <div class="card-body">
+                        <h5>{{ item.item_number }}</h5>
+                        <p class="mb-1"><strong>Location:</strong> {{ item.location }}</p>
+                        <p class="mb-1"><strong>Assigned by:</strong> {{ item.last_modified_by or 'Admin' }}</p>
+                        <p class="mb-1"><strong>Status:</strong> 
+                            <span class="badge bg-warning text-dark">{{ item.status }}</span>
+                        </p>
+                        {% if item.revision_notes %}
+                        <div class="alert alert-info mb-2 mt-2">
+                            <strong>📝 Revision Notes:</strong><br>
+                            {{ item.revision_notes }}
+                        </div>
+                        {% endif %}
+                        <button type="button" class="btn btn-primary" 
+                                onclick="loadAssignment({{ item.id }})">
+                            Load & Edit This Item
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Submit Work Item Draft</h3>
+                <small>Submitting as: <strong>{{ crew_name }}</strong></small>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="workItemForm">
+                    
+                    <!-- Item Number Selection -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Item Number
+                            <small class="text-muted">(Select from lists or enter custom)</small>
+                        </label>
+                        
+                        <!-- Radio buttons for selection mode -->
+                        <div class="btn-group w-100 mb-2" role="group">
+                    <input type="radio" class="btn-check" name="item_mode" id="mode_custom" value="custom" checked>
+                    <label class="btn btn-outline-primary" for="mode_custom">New</label>
+                            
+                            <input type="radio" class="btn-check" name="item_mode" id="mode_ev" value="ev">
+                            <label class="btn btn-outline-primary" for="mode_ev">EV Yard Items</label>
+                            
+                            <input type="radio" class="btn-check" name="item_mode" id="mode_draft" value="draft">
+                            <label class="btn btn-outline-primary" for="mode_draft">Draft Items</label>
+                        </div>
+                        
+                        <!-- Custom input (default) -->
+                        <input type="text" class="form-control" id="item_number_custom" 
+                               name="item_number" value="{{ next_item_number }}" placeholder="Enter custom item number">
+                        
+                        <!-- EV Yard Items dropdown (hidden by default) -->
+                        <select class="form-select d-none" id="item_number_ev" disabled>
+                            <option value="">-- Select EV Yard Item --</option>
+                            {% for item in ev_yard_items %}
+                            <option value="{{ item }}">{{ item }}</option>
+                            {% endfor %}
+                        </select>
+                        
+                        <!-- Draft Items dropdown (hidden by default) -->
+                        <select class="form-select d-none" id="item_number_draft" disabled>
+                            <option value="">-- Select Draft Item --</option>
+                            {% for item in draft_items %}
+                            <option value="{{ item }}">{{ item }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Location -->
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location *</label>
+                        <input type="text" class="form-control" id="location" 
+                               name="location" placeholder="e.g., Engine Room STBD AFT, Pilot House FWD PORT Console" 
+                               required spellcheck="true">
+                        <small class="form-text text-muted">
+                            Be specific with location details including: compartment, side (PORT/STBD), position (FWD/AFT), deck level, frame numbers, equipment location
+                        </small>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (Brief Summary) *</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="2" maxlength="200" required spellcheck="true"
+                                  placeholder="Brief 1-2 sentence description (max 200 characters)"></textarea>
+                        <small class="form-text text-muted">
+                            Example: "Port & Stbd ME Exhaust insulation overhaul"
+                        </small>
+                    </div>
+                    
+                    <!-- Detail -->
+                    <div class="mb-3">
+                        <label for="detail" class="form-label">Detail (Complete Description) *</label>
+                        <textarea class="form-control" id="detail" name="detail" 
+                                  rows="6" required spellcheck="true"
+                                  placeholder="Include: What needs to be done, Why, Scope of work, WO numbers, Equipment specs, Regulatory requirements"></textarea>
+                        <small class="form-text text-muted">
+                            Provide comprehensive details including what needs to be done, why, scope, WO numbers, equipment specs, and any regulatory requirements.
+                        </small>
+                    </div>
+                    
+                    <!-- Operator Furnished Material -->
+                    <div class="mb-3">
+                        <label for="references" class="form-label">Operator Furnished Material (OFM)</label>
+                        <textarea class="form-control" id="references" name="references" 
+                                  rows="3" spellcheck="true"
+                                  placeholder="If known, list materials on order or onboard (e.g., part numbers, descriptions). Otherwise write 'None'."></textarea>
+                        <small class="form-text text-muted">
+                            List any materials, parts, or equipment that need to be provided for this work item.
+                        </small>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <!-- Photos Section -->
+                    <h5 class="mb-3">Photos (Optional, Maximum {{ max_photos }})</h5>
+                    
+                    <div id="photoContainer">
+                        <!-- Photo inputs will be added dynamically -->
+                    </div>
+                    
+                    <button type="button" class="btn btn-secondary mb-3" id="addPhotoBtn">
+                        + Add Photo
+                    </button>
+                    
+                    <hr class="my-4">
+                    
+                    <!-- Submit Button -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            Submit Work Item
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Load assignment function
+function loadAssignment(itemId) {
+    fetch(`/crew/load-assignment/${itemId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            
+            // Populate form fields
+            document.getElementById('item_number_custom').value = data.item_number;
+            document.getElementById('item_number_custom').readOnly = true;  // Can't change item number
+            document.getElementById('location').value = data.location;
+            document.getElementById('description').value = data.description;
+            document.getElementById('detail').value = data.detail;
+            document.getElementById('references').value = data.references;
+            
+            // Show revision notes if present
+            if (data.revision_notes) {
+                alert('⚠️ REVISION NOTES:\n\n' + data.revision_notes + '\n\nPlease address these points before resubmitting.');
+            }
+            
+            // Scroll to form
+            document.getElementById('workItemForm').scrollIntoView({ behavior: 'smooth' });
+        })
+        .catch(error => {
+            alert('Error loading assignment: ' + error);
+        });
+}
+
+// Item number mode switching
+const modeRadios = document.querySelectorAll('input[name="item_mode"]');
+const customInput = document.getElementById('item_number_custom');
+const evSelect = document.getElementById('item_number_ev');
+const draftSelect = document.getElementById('item_number_draft');
+
+modeRadios.forEach(radio => {
+    radio.addEventListener('change', function() {
+        // Hide all and disable
+        customInput.classList.add('d-none');
+        customInput.disabled = true;
+        customInput.removeAttribute('name');
+        
+        evSelect.classList.add('d-none');
+        evSelect.disabled = true;
+        evSelect.removeAttribute('name');
+        
+        draftSelect.classList.add('d-none');
+        draftSelect.disabled = true;
+        draftSelect.removeAttribute('name');
+        
+        // Show selected mode
+        if (this.value === 'custom') {
+            customInput.classList.remove('d-none');
+            customInput.disabled = false;
+            customInput.setAttribute('name', 'item_number');
+        } else if (this.value === 'ev') {
+            evSelect.classList.remove('d-none');
+            evSelect.disabled = false;
+            evSelect.setAttribute('name', 'item_number');
+        } else if (this.value === 'draft') {
+            draftSelect.classList.remove('d-none');
+            draftSelect.disabled = false;
+            draftSelect.setAttribute('name', 'item_number');
+        }
+    });
+});
+
+// Photo management
+let photoCount = 0;
+const minPhotos = {{ min_photos }};
+const maxPhotos = {{ max_photos }};
+
+function addPhotoInput() {
+    if (photoCount >= maxPhotos) {
+        alert(`Maximum ${maxPhotos} photos allowed`);
+        return;
+    }
+    
+    photoCount++;
+    const photoDiv = document.createElement('div');
+    photoDiv.className = 'card mb-3 photo-input';
+    photoDiv.id = `photo-${photoCount}`;
+    photoDiv.innerHTML = `
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <label class="form-label">Photo ${photoCount}</label>
+                    <input type="file" class="form-control" name="photos" 
+                           accept="image/jpeg,image/jpg,image/png,image/heic,image/heif">
+                </div>
+                <div class="col-md-6 mb-2">
+                    <label class="form-label">Photo ${photoCount} Caption (Optional)</label>
+                    <input type="text" class="form-control" name="photo_captions" 
+                           placeholder="Describe what this photo shows">
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removePhoto(${photoCount})">
+                Remove Photo ${photoCount}
+            </button>
+        </div>
+    `;
+    
+    document.getElementById('photoContainer').appendChild(photoDiv);
+    updateAddPhotoButton();
+}
+
+function removePhoto(num) {
+    const photoDiv = document.getElementById(`photo-${num}`);
+    if (photoDiv) {
+        photoDiv.remove();
+        photoCount--;
+        updateAddPhotoButton();
+    }
+}
+
+function updateAddPhotoButton() {
+    const btn = document.getElementById('addPhotoBtn');
+    if (photoCount >= maxPhotos) {
+        btn.disabled = true;
+        btn.textContent = `Maximum ${maxPhotos} photos reached`;
+    } else {
+        btn.disabled = false;
+        btn.textContent = '+ Add Photo';
+    }
+}
+
+// Start with no photos by default (photos are optional)
+// Users can add photos using the "Add Photo" button
+
+// Add event listener to the Add Photo button
+document.getElementById('addPhotoBtn').addEventListener('click', addPhotoInput);
+
+// Form validation - no photo validation needed since photos are optional
+document.getElementById('workItemForm').addEventListener('submit', function(e) {
+    // Could add other validation here if needed
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,58 @@
+/* Mobile-first responsive design */
+body {
+    font-family: 'Calibri', 'Segoe UI', Tahoma, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.card {
+    border: none;
+    border-radius: 8px;
+}
+
+.card-header {
+    border-radius: 8px 8px 0 0 !important;
+}
+
+/* Large touch-friendly buttons for mobile */
+@media (max-width: 768px) {
+    .btn-lg {
+        padding: 1rem;
+        font-size: 1.1rem;
+    }
+    
+    .form-control-lg, .form-select-lg {
+        padding: 0.75rem;
+        font-size: 1.1rem;
+    }
+}
+
+/* Photo input styling */
+.photo-input {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+}
+
+/* Status badges */
+.badge {
+    padding: 0.5em 0.75em;
+    font-weight: 500;
+}
+
+/* Table improvements for mobile */
+@media (max-width: 768px) {
+    .table-responsive {
+        font-size: 0.9rem;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Loading spinner */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+}
+

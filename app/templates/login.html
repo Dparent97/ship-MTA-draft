@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Crew Login{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-body">
+                <h2 class="card-title text-center mb-4">Crew Login</h2>
+                
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="crew_name" class="form-label">Your Name *</label>
+                        <select class="form-select form-select-lg" id="crew_name" name="crew_name" required>
+                            <option value="">Select your name...</option>
+                            {% for name in crew_members %}
+                            <option value="{{ name }}">{{ name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Crew Password *</label>
+                        <input type="password" class="form-control form-control-lg" 
+                               id="password" name="password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        Login
+                    </button>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <a href="{{ url_for('auth.admin_login') }}" class="text-muted small">
+                        Admin Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

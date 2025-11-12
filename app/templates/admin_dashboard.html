@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Work Item Dashboard</h2>
+    <span class="badge bg-secondary">{{ work_items|length }} Total Items</span>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">Status Filter</label>
+                <select class="form-select" name="status" onchange="this.form.submit()">
+                    <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
+                    <option value="Submitted" {% if status_filter == 'Submitted' %}selected{% endif %}>Submitted</option>
+                    <option value="In Review by DP" {% if status_filter == 'In Review by DP' %}selected{% endif %}>In Review by DP</option>
+                    <option value="In Review by AL" {% if status_filter == 'In Review by AL' %}selected{% endif %}>In Review by AL</option>
+                    <option value="Needs Revision" {% if status_filter == 'Needs Revision' %}selected{% endif %}>Needs Revision</option>
+                    <option value="Awaiting Photos" {% if status_filter == 'Awaiting Photos' %}selected{% endif %}>Awaiting Photos</option>
+                    <option value="Completed Review" {% if status_filter == 'Completed Review' %}selected{% endif %}>Completed Review</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Sort By</label>
+                <select class="form-select" name="sort" onchange="this.form.submit()">
+                    <option value="date_desc" {% if sort_by == 'date_desc' %}selected{% endif %}>Newest First</option>
+                    <option value="date_asc" {% if sort_by == 'date_asc' %}selected{% endif %}>Oldest First</option>
+                    <option value="item_number" {% if sort_by == 'item_number' %}selected{% endif %}>Item Number</option>
+                    <option value="submitter" {% if sort_by == 'submitter' %}selected{% endif %}>Submitter</option>
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Batch Actions -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('admin.download_batch') }}" id="batchForm">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <input type="checkbox" id="selectAll" class="form-check-input me-2">
+                    <label for="selectAll">Select All</label>
+                    <span class="badge bg-info ms-2" id="selectedCount">0 selected</span>
+                </div>
+                <button type="submit" class="btn btn-success" id="downloadBatchBtn" disabled>
+                    Download Selected (.zip)
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Work Items Table -->
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th width="40">
+                    <input type="checkbox" id="selectAllTable" class="form-check-input">
+                </th>
+                <th>Item No.</th>
+                <th>Description</th>
+                <th>Location</th>
+                <th>Submitter</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in work_items %}
+            <tr>
+                <td>
+                    <input type="checkbox" class="form-check-input item-checkbox" 
+                           value="{{ item.id }}" form="batchForm" name="item_ids[]">
+                </td>
+                <td><strong>{{ item.item_number }}</strong></td>
+                <td>{{ item.description[:50] }}{% if item.description|length > 50 %}...{% endif %}</td>
+                <td>{{ item.location }}</td>
+                <td>{{ item.submitter_name }}</td>
+                <td><small>{{ format_datetime(item.submitted_at) }}</small></td>
+                <td>
+                    <span class="badge 
+                        {% if item.status == 'Submitted' %}bg-primary
+                        {% elif item.status == 'In Review by DP' %}bg-warning text-dark
+                        {% elif item.status == 'In Review by AL' %}bg-warning text-dark
+                        {% elif item.status == 'Needs Revision' %}bg-danger
+                        {% elif item.status == 'Awaiting Photos' %}bg-info
+                        {% elif item.status == 'Completed Review' %}bg-success
+                        {% else %}bg-secondary{% endif %}">
+                        {{ item.status }}
+                    </span>
+                </td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ url_for('admin.view_item', item_id=item.id) }}" 
+                           class="btn btn-outline-primary" title="View Details">
+                            View
+                        </a>
+                        <a href="{{ url_for('admin.download_single', item_id=item.id) }}" 
+                           class="btn btn-outline-success" title="Download .docx">
+                            Download
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="8" class="text-center text-muted py-4">
+                    No work items found
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Batch selection logic
+const checkboxes = document.querySelectorAll('.item-checkbox');
+const selectAll = document.getElementById('selectAllTable');
+const selectedCount = document.getElementById('selectedCount');
+const downloadBtn = document.getElementById('downloadBatchBtn');
+
+function updateSelectedCount() {
+    const checked = document.querySelectorAll('.item-checkbox:checked').length;
+    selectedCount.textContent = `${checked} selected`;
+    downloadBtn.disabled = checked === 0;
+}
+
+selectAll.addEventListener('change', function() {
+    checkboxes.forEach(cb => cb.checked = this.checked);
+    updateSelectedCount();
+});
+
+checkboxes.forEach(cb => {
+    cb.addEventListener('change', updateSelectedCount);
+});
+
+updateSelectedCount();
+</script>
+{% endblock %}
+

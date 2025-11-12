@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+env/
+
+# Flask
+instance/
+.webassets-cache
+
+# Database
+*.db
+*.sqlite
+
+# Uploads
+uploads/
+generated_docs/
+app/static/uploads/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
