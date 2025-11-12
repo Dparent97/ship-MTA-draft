@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
 from app import db
 from app.models import WorkItem, Photo, Comment
 from app.utils import allowed_file, generate_unique_filename, resize_image, get_next_draft_number
@@ -165,27 +165,120 @@ def submit_form():
                          assigned_items=assigned_items)
 
 
-@bp.route('/load-assignment/<int:item_id>')
+@bp.route('/edit/<int:item_id>', methods=['GET', 'POST'])
 @crew_required
-def load_assignment(item_id):
-    """Load an assigned work item for editing."""
+def edit_assigned_item(item_id):
+    """Edit an assigned work item (crew member must be assigned to it)."""
     crew_name = session.get('crew_name')
     work_item = WorkItem.query.get_or_404(item_id)
-    
-    # Verify this item is assigned to them
+
+    # Permission check: Verify this item is assigned to the current crew member
     if work_item.assigned_to != crew_name:
-        return jsonify({'error': 'This item is not assigned to you'}), 403
-    
-    # Return as JSON for JavaScript to populate form
-    return jsonify({
-        'item_number': work_item.item_number,
-        'location': work_item.location,
-        'description': work_item.description,
-        'detail': work_item.detail,
-        'references': work_item.references or '',
-        'revision_notes': work_item.revision_notes or '',
-        'photos': [{'id': p.id, 'caption': p.caption, 'filename': p.filename} for p in work_item.photos]
-    })
+        flash('You do not have permission to edit this item. It must be assigned to you.', 'danger')
+        return redirect(url_for('crew.submit_form'))
+
+    # Only allow editing if status is "Needs Revision" or "Awaiting Photos"
+    if work_item.status not in ['Needs Revision', 'Awaiting Photos']:
+        flash(f'This item cannot be edited. Current status: {work_item.status}', 'warning')
+        return redirect(url_for('crew.submit_form'))
+
+    if request.method == 'POST':
+        try:
+            # Update allowed fields only
+            work_item.description = request.form.get('description')
+            work_item.detail = request.form.get('detail')
+            work_item.references = request.form.get('references', '')
+
+            # Auto-update tracking fields
+            work_item.last_modified_by = crew_name
+            work_item.last_modified_at = datetime.utcnow()
+
+            # Change status from "Needs Revision" to "Submitted" on save
+            old_status = work_item.status
+            work_item.status = 'Submitted'
+            work_item.needs_revision = False
+
+            # Clear revision notes after addressing them
+            work_item.revision_notes = None
+
+            # Update existing photo captions
+            photo_ids = request.form.getlist('photo_ids[]')
+            photo_captions = request.form.getlist('photo_captions[]')
+
+            for photo_id, caption in zip(photo_ids, photo_captions):
+                photo = Photo.query.get(int(photo_id))
+                if photo and photo.work_item_id == work_item.id:
+                    photo.caption = caption
+
+            # Handle new photo uploads
+            new_photo_files = request.files.getlist('new_photos[]')
+            new_photo_captions = request.form.getlist('new_photo_captions[]')
+
+            for photo_file, caption in zip(new_photo_files, new_photo_captions):
+                if photo_file and photo_file.filename and allowed_file(photo_file.filename):
+                    filename = generate_unique_filename(photo_file.filename)
+                    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                    photo_file.save(filepath)
+                    _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
+                    final_filename = os.path.basename(final_path)
+
+                    new_photo = Photo(
+                        filename=final_filename,
+                        caption=caption or '',
+                        work_item_id=work_item.id
+                    )
+                    db.session.add(new_photo)
+
+            db.session.commit()
+            flash(f'Work item {work_item.item_number} updated successfully! Status changed from "{old_status}" to "Submitted".', 'success')
+            return redirect(url_for('crew.success', item_number=work_item.item_number))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating work item: {str(e)}', 'danger')
+            return redirect(url_for('crew.edit_assigned_item', item_id=item_id))
+
+    # GET request - show edit form
+    return render_template('crew_edit.html',
+                         work_item=work_item,
+                         crew_name=crew_name,
+                         max_photos=current_app.config['PHOTO_MAX_COUNT'])
+
+
+@bp.route('/delete-photo/<int:item_id>/<int:photo_id>')
+@crew_required
+def delete_assigned_photo(item_id, photo_id):
+    """Delete a photo from an assigned work item."""
+    crew_name = session.get('crew_name')
+    work_item = WorkItem.query.get_or_404(item_id)
+
+    # Permission check
+    if work_item.assigned_to != crew_name:
+        flash('You do not have permission to modify this item.', 'danger')
+        return redirect(url_for('crew.submit_form'))
+
+    photo = Photo.query.get_or_404(photo_id)
+
+    # Verify photo belongs to the work item
+    if photo.work_item_id != item_id:
+        flash('Invalid photo', 'danger')
+        return redirect(url_for('crew.edit_assigned_item', item_id=item_id))
+
+    try:
+        # Delete file from disk
+        photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename)
+        if os.path.exists(photo_path):
+            os.remove(photo_path)
+
+        # Delete from database
+        db.session.delete(photo)
+        db.session.commit()
+        flash('Photo deleted successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting photo: {str(e)}', 'danger')
+
+    return redirect(url_for('crew.edit_assigned_item', item_id=item_id))
 
 
 @bp.route('/success')

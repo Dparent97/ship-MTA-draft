@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Work Item - {{ work_item.item_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Revision Notes Alert (Prominent Display) -->
+        {% if work_item.revision_notes %}
+        <div class="alert alert-warning border-warning shadow-sm mb-4">
+            <h4 class="alert-heading">
+                <i class="bi bi-pencil-square"></i> Revision Notes from {{ work_item.last_modified_by or 'Admin' }}
+            </h4>
+            <hr>
+            <p class="mb-0" style="white-space: pre-wrap;">{{ work_item.revision_notes }}</p>
+            <hr>
+            <small class="text-muted">
+                Please address these points before resubmitting. Once you save, the status will change to "Submitted" for review.
+            </small>
+        </div>
+        {% endif %}
+
+        <!-- Edit Form Card -->
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h3 class="mb-0">Edit Assigned Work Item</h3>
+                <small>Editing as: <strong>{{ crew_name }}</strong> | Status: <span class="badge bg-dark">{{ work_item.status }}</span></small>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="editWorkItemForm">
+
+                    <!-- Read-Only Item Number -->
+                    <div class="mb-3">
+                        <label class="form-label">Item Number (Cannot be changed)</label>
+                        <input type="text" class="form-control" value="{{ work_item.item_number }}"
+                               readonly style="background-color: #e9ecef; cursor: not-allowed;">
+                        <small class="form-text text-muted">
+                            This field cannot be modified when editing an assigned item.
+                        </small>
+                    </div>
+
+                    <!-- Read-Only Location -->
+                    <div class="mb-3">
+                        <label class="form-label">Location (Cannot be changed)</label>
+                        <input type="text" class="form-control" value="{{ work_item.location }}"
+                               readonly style="background-color: #e9ecef; cursor: not-allowed;">
+                        <small class="form-text text-muted">
+                            This field cannot be modified when editing an assigned item.
+                        </small>
+                    </div>
+
+                    <hr class="my-4">
+                    <h5 class="mb-3">Editable Fields</h5>
+
+                    <!-- Description (Editable) -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (Brief Summary) *</label>
+                        <textarea class="form-control" id="description" name="description"
+                                  rows="2" maxlength="200" required spellcheck="true"
+                                  placeholder="Brief 1-2 sentence description (max 200 characters)">{{ work_item.description }}</textarea>
+                        <small class="form-text text-muted">
+                            Example: "Port & Stbd ME Exhaust insulation overhaul"
+                        </small>
+                    </div>
+
+                    <!-- Detail (Editable) -->
+                    <div class="mb-3">
+                        <label for="detail" class="form-label">Detail (Complete Description) *</label>
+                        <textarea class="form-control" id="detail" name="detail"
+                                  rows="6" required spellcheck="true"
+                                  placeholder="Include: What needs to be done, Why, Scope of work, WO numbers, Equipment specs, Regulatory requirements">{{ work_item.detail }}</textarea>
+                        <small class="form-text text-muted">
+                            Provide comprehensive details including what needs to be done, why, scope, WO numbers, equipment specs, and any regulatory requirements.
+                        </small>
+                    </div>
+
+                    <!-- References/OFM (Editable) -->
+                    <div class="mb-3">
+                        <label for="references" class="form-label">Operator Furnished Material (OFM)</label>
+                        <textarea class="form-control" id="references" name="references"
+                                  rows="3" spellcheck="true"
+                                  placeholder="If known, list materials on order or onboard (e.g., part numbers, descriptions). Otherwise write 'None'.">{{ work_item.references or '' }}</textarea>
+                        <small class="form-text text-muted">
+                            List any materials, parts, or equipment that need to be provided for this work item.
+                        </small>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <!-- Existing Photos Section -->
+                    <h5 class="mb-3">Existing Photos</h5>
+
+                    {% if work_item.photos %}
+                    <div id="existingPhotosContainer">
+                        {% for photo in work_item.photos %}
+                        <div class="card mb-3" id="existing-photo-{{ photo.id }}">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <img src="{{ url_for('admin.serve_upload', filename=photo.filename) }}"
+                                             class="img-fluid rounded" alt="Work item photo">
+                                    </div>
+                                    <div class="col-md-8 mb-2">
+                                        <label class="form-label">Photo Caption</label>
+                                        <input type="hidden" name="photo_ids[]" value="{{ photo.id }}">
+                                        <input type="text" class="form-control mb-2"
+                                               name="photo_captions[]"
+                                               value="{{ photo.caption }}"
+                                               placeholder="Describe what this photo shows">
+                                        <a href="{{ url_for('crew.delete_assigned_photo', item_id=work_item.id, photo_id=photo.id) }}"
+                                           class="btn btn-sm btn-danger"
+                                           onclick="return confirm('Are you sure you want to delete this photo?')">
+                                            Delete Photo
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No existing photos.</p>
+                    {% endif %}
+
+                    <hr class="my-4">
+
+                    <!-- Add New Photos Section -->
+                    <h5 class="mb-3">Add New Photos (Optional, Maximum {{ max_photos }})</h5>
+
+                    <div id="newPhotoContainer">
+                        <!-- New photo inputs will be added dynamically -->
+                    </div>
+
+                    <button type="button" class="btn btn-secondary mb-3" id="addNewPhotoBtn">
+                        + Add New Photo
+                    </button>
+
+                    <hr class="my-4">
+
+                    <!-- Save Button -->
+                    <div class="alert alert-info">
+                        <strong>Note:</strong> When you save your changes:
+                        <ul class="mb-0 mt-2">
+                            <li>Status will change from "{{ work_item.status }}" to "Submitted"</li>
+                            <li>The item will be sent back for admin review</li>
+                            <li>Revision notes will be cleared</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            Save Changes & Resubmit
+                        </button>
+                        <a href="{{ url_for('crew.submit_form') }}" class="btn btn-outline-secondary">
+                            Cancel & Return to Form
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// New photo management
+let newPhotoCount = 0;
+const maxPhotos = {{ max_photos }};
+
+function addNewPhotoInput() {
+    // Count existing photos
+    const existingPhotosCount = document.querySelectorAll('#existingPhotosContainer .card').length;
+    const currentNewPhotos = document.querySelectorAll('#newPhotoContainer .photo-input').length;
+
+    if (existingPhotosCount + currentNewPhotos >= maxPhotos) {
+        alert(`Maximum ${maxPhotos} total photos allowed`);
+        return;
+    }
+
+    newPhotoCount++;
+    const photoDiv = document.createElement('div');
+    photoDiv.className = 'card mb-3 photo-input';
+    photoDiv.id = `new-photo-${newPhotoCount}`;
+    photoDiv.innerHTML = `
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <label class="form-label">New Photo ${newPhotoCount}</label>
+                    <input type="file" class="form-control" name="new_photos[]"
+                           accept="image/jpeg,image/jpg,image/png,image/heic,image/heif">
+                </div>
+                <div class="col-md-6 mb-2">
+                    <label class="form-label">Caption (Optional)</label>
+                    <input type="text" class="form-control" name="new_photo_captions[]"
+                           placeholder="Describe what this photo shows">
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="removeNewPhoto(${newPhotoCount})">
+                Remove Photo ${newPhotoCount}
+            </button>
+        </div>
+    `;
+
+    document.getElementById('newPhotoContainer').appendChild(photoDiv);
+    updateAddNewPhotoButton();
+}
+
+function removeNewPhoto(num) {
+    const photoDiv = document.getElementById(`new-photo-${num}`);
+    if (photoDiv) {
+        photoDiv.remove();
+        updateAddNewPhotoButton();
+    }
+}
+
+function updateAddNewPhotoButton() {
+    const existingPhotosCount = document.querySelectorAll('#existingPhotosContainer .card').length;
+    const currentNewPhotos = document.querySelectorAll('#newPhotoContainer .photo-input').length;
+    const totalPhotos = existingPhotosCount + currentNewPhotos;
+
+    const btn = document.getElementById('addNewPhotoBtn');
+    if (totalPhotos >= maxPhotos) {
+        btn.disabled = true;
+        btn.textContent = `Maximum ${maxPhotos} photos reached`;
+    } else {
+        btn.disabled = false;
+        btn.textContent = '+ Add New Photo';
+    }
+}
+
+// Add event listener to the Add Photo button
+document.getElementById('addNewPhotoBtn').addEventListener('click', addNewPhotoInput);
+
+// Initialize button state
+updateAddNewPhotoButton();
+
+// Form submission confirmation
+document.getElementById('editWorkItemForm').addEventListener('submit', function(e) {
+    const confirmed = confirm('Are you sure you want to save these changes? The item will be resubmitted for review with status "Submitted".');
+    if (!confirmed) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

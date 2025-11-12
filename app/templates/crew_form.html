@@ -26,10 +26,10 @@
                             {{ item.revision_notes }}
                         </div>
                         {% endif %}
-                        <button type="button" class="btn btn-primary" 
-                                onclick="loadAssignment({{ item.id }})">
-                            Load & Edit This Item
-                        </button>
+                        <a href="{{ url_for('crew.edit_assigned_item', item_id=item.id) }}"
+                           class="btn btn-primary">
+                            Edit This Item
+                        </a>
                     </div>
                 </div>
                 {% endfor %}
@@ -159,37 +159,6 @@
 
 {% block extra_js %}
 <script>
-// Load assignment function
-function loadAssignment(itemId) {
-    fetch(`/crew/load-assignment/${itemId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-                return;
-            }
-            
-            // Populate form fields
-            document.getElementById('item_number_custom').value = data.item_number;
-            document.getElementById('item_number_custom').readOnly = true;  // Can't change item number
-            document.getElementById('location').value = data.location;
-            document.getElementById('description').value = data.description;
-            document.getElementById('detail').value = data.detail;
-            document.getElementById('references').value = data.references;
-            
-            // Show revision notes if present
-            if (data.revision_notes) {
-                alert('⚠️ REVISION NOTES:\n\n' + data.revision_notes + '\n\nPlease address these points before resubmitting.');
-            }
-            
-            // Scroll to form
-            document.getElementById('workItemForm').scrollIntoView({ behavior: 'smooth' });
-        })
-        .catch(error => {
-            alert('Error loading assignment: ' + error);
-        });
-}
-
 // Item number mode switching
 const modeRadios = document.querySelectorAll('input[name="item_mode"]');
 const customInput = document.getElementById('item_number_custom');
