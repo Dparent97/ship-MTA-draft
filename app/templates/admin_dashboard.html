@@ -89,7 +89,7 @@
         <!-- Photo Thumbnail -->
         <div class="card-img-container position-relative">
             {% if item.photos and item.photos|length > 0 %}
-                <img src="{{ url_for('admin.serve_upload', filename=item.photos[0].filename) }}"
+                <img src="{{ url_for('serve_upload', filename=item.photos[0].filename) }}"
                      class="card-img-top work-item-thumbnail"
                      alt="{{ item.item_number }}"
                      loading="lazy">
