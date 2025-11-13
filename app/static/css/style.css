@@ -899,3 +899,313 @@ a:hover {
     box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2) !important;
 >>>>>>> theirs
 }
+||||||| 7da8b4c
+
+/* ==============================================
+   Enhanced Photo Upload System Styles
+   ============================================== */
+
+/* Drop Zone Styles */
+.photo-drop-zone {
+    position: relative;
+    border: 3px dashed #cbd5e0;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    text-align: center;
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+    margin-bottom: 2rem;
+}
+
+.photo-drop-zone.hidden {
+    display: none;
+}
+
+.photo-drop-zone:hover {
+    border-color: #0d6efd;
+    background-color: #e7f3ff;
+}
+
+.photo-drop-zone.drag-over {
+    border-color: #0d6efd;
+    background-color: #e7f3ff;
+    border-style: solid;
+    transform: scale(1.02);
+}
+
+.drop-zone-content {
+    color: #6c757d;
+}
+
+.drop-zone-content svg {
+    color: #0d6efd;
+    opacity: 0.6;
+}
+
+.drop-zone-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(13, 110, 253, 0.95);
+    border-radius: 12px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.photo-drop-zone.drag-over .drop-zone-overlay {
+    display: flex;
+}
+
+.drop-zone-overlay-content svg {
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Photo Preview Container */
+.photo-preview-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .photo-preview-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Photo Preview Card */
+.photo-preview-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.photo-preview-card.removing {
+    animation: slideOut 0.3s ease;
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.9);
+    }
+}
+
+.photo-preview-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Loading State */
+.photo-preview-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    min-height: 250px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+/* Photo Preview Content */
+.photo-preview-content {
+    display: block;
+}
+
+.photo-preview-image {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    background: #f8f9fa;
+    aspect-ratio: 4/3;
+}
+
+.photo-preview-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Delete Button */
+.photo-delete-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+    transform: scale(0.8);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.photo-preview-card:hover .photo-delete-btn {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.photo-delete-btn:hover {
+    background: rgba(220, 53, 69, 1);
+    transform: scale(1.1);
+}
+
+.photo-delete-btn:active {
+    transform: scale(0.95);
+}
+
+/* Photo Info */
+.photo-preview-info {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.photo-caption-input {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.5rem;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.photo-caption-input:focus {
+    outline: none;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.photo-filename {
+    display: block;
+    font-size: 0.85rem;
+    color: #6c757d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.photo-filesize {
+    display: block;
+    font-size: 0.8rem;
+    color: #adb5bd;
+}
+
+/* Toast Notifications */
+.photo-upload-toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s ease;
+    max-width: 400px;
+    border-left: 4px solid #dc3545;
+}
+
+.photo-upload-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.photo-upload-toast.error {
+    border-left-color: #dc3545;
+}
+
+.photo-upload-toast.error svg {
+    color: #dc3545;
+    flex-shrink: 0;
+}
+
+.photo-upload-toast span {
+    flex: 1;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+@media (max-width: 768px) {
+    .photo-upload-toast {
+        bottom: 1rem;
+        right: 1rem;
+        left: 1rem;
+        max-width: none;
+    }
+}
+
+/* Loading Spinner */
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .photo-drop-zone {
+        padding: 2rem 1rem;
+    }
+
+    .photo-preview-image {
+        aspect-ratio: 16/9;
+    }
+
+    .photo-delete-btn {
+        opacity: 1;
+        width: 40px;
+        height: 40px;
+    }
+}
+
+/* Animation for loaded images */
+.photo-preview-card.loaded .photo-preview-content {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}

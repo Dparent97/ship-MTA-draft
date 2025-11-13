@@ -125,15 +125,14 @@
                     <hr class="my-4">
 
                     <!-- Add New Photos Section -->
-                    <h5 class="mb-3">Add New Photos (Optional, Maximum {{ max_photos }})</h5>
+                    <h5 class="mb-3">Add New Photos</h5>
+                    <p class="text-muted small mb-3">
+                        Drag and drop photos or click to upload (Maximum {{ max_photos }} total)
+                    </p>
 
-                    <div id="newPhotoContainer">
-                        <!-- New photo inputs will be added dynamically -->
+                    <div id="photoUploadContainer" data-max-photos="{{ max_photos }}" data-min-photos="0">
+                        <!-- Photo upload UI will be injected here by photo-upload.js -->
                     </div>
-
-                    <button type="button" class="btn btn-secondary mb-3" id="addNewPhotoBtn">
-                        + Add New Photo
-                    </button>
 
                     <hr class="my-4">
 
@@ -163,84 +162,68 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/photo-upload.js') }}"></script>
 <script>
-// New photo management
-let newPhotoCount = 0;
-const maxPhotos = {{ max_photos }};
-
-function addNewPhotoInput() {
-    // Count existing photos
+// Adjust max photos based on existing photos count
+document.addEventListener('DOMContentLoaded', function() {
     const existingPhotosCount = document.querySelectorAll('#existingPhotosContainer .card').length;
-    const currentNewPhotos = document.querySelectorAll('#newPhotoContainer .photo-input').length;
+    const maxPhotos = {{ max_photos }};
+    const container = document.getElementById('photoUploadContainer');
 
-    if (existingPhotosCount + currentNewPhotos >= maxPhotos) {
-        alert(`Maximum ${maxPhotos} total photos allowed`);
-        return;
+    if (container && window.photoUploadManager) {
+        // Adjust the max photos to account for existing photos
+        const remainingSlots = maxPhotos - existingPhotosCount;
+        window.photoUploadManager.maxPhotos = remainingSlots;
+        window.photoUploadManager.updateDropZoneVisibility();
     }
+});
 
-    newPhotoCount++;
-    const photoDiv = document.createElement('div');
-    photoDiv.className = 'card mb-3 photo-input';
-    photoDiv.id = `new-photo-${newPhotoCount}`;
-    photoDiv.innerHTML = `
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6 mb-2">
-                    <label class="form-label">New Photo ${newPhotoCount}</label>
-                    <input type="file" class="form-control" name="new_photos[]"
-                           accept="image/jpeg,image/jpg,image/png,image/heic,image/heif">
-                </div>
-                <div class="col-md-6 mb-2">
-                    <label class="form-label">Caption (Optional)</label>
-                    <input type="text" class="form-control" name="new_photo_captions[]"
-                           placeholder="Describe what this photo shows">
-                </div>
-            </div>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removeNewPhoto(${newPhotoCount})">
-                Remove Photo ${newPhotoCount}
-            </button>
-        </div>
-    `;
-
-    document.getElementById('newPhotoContainer').appendChild(photoDiv);
-    updateAddNewPhotoButton();
-}
-
-function removeNewPhoto(num) {
-    const photoDiv = document.getElementById(`new-photo-${num}`);
-    if (photoDiv) {
-        photoDiv.remove();
-        updateAddNewPhotoButton();
-    }
-}
-
-function updateAddNewPhotoButton() {
-    const existingPhotosCount = document.querySelectorAll('#existingPhotosContainer .card').length;
-    const currentNewPhotos = document.querySelectorAll('#newPhotoContainer .photo-input').length;
-    const totalPhotos = existingPhotosCount + currentNewPhotos;
-
-    const btn = document.getElementById('addNewPhotoBtn');
-    if (totalPhotos >= maxPhotos) {
-        btn.disabled = true;
-        btn.textContent = `Maximum ${maxPhotos} photos reached`;
-    } else {
-        btn.disabled = false;
-        btn.textContent = '+ Add New Photo';
-    }
-}
-
-// Add event listener to the Add Photo button
-document.getElementById('addNewPhotoBtn').addEventListener('click', addNewPhotoInput);
-
-// Initialize button state
-updateAddNewPhotoButton();
-
-// Form submission confirmation
+// Form submission - append new photos to form data
 document.getElementById('editWorkItemForm').addEventListener('submit', function(e) {
+    // Confirm before submitting
     const confirmed = confirm('Are you sure you want to save these changes? The item will be resubmitted for review with status "Submitted".');
     if (!confirmed) {
         e.preventDefault();
+        return;
     }
+
+    e.preventDefault();
+
+    // Create FormData from the form
+    const formData = new FormData(this);
+
+    // Remove any existing new photo data (old system compatibility)
+    formData.delete('new_photos[]');
+    formData.delete('new_photo_captions[]');
+
+    // Add new photos from the upload manager
+    if (window.photoUploadManager) {
+        const photos = window.photoUploadManager.getPhotos();
+        photos.forEach(photo => {
+            formData.append('new_photos[]', photo.file);
+            formData.append('new_photo_captions[]', photo.caption || '');
+        });
+    }
+
+    // Submit the form
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            // Redirect to success page or reload
+            window.location.href = response.url;
+        } else {
+            return response.text().then(text => {
+                throw new Error('Form submission failed: ' + text);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an error submitting the form. Please try again.');
+    });
 });
 </script>
 {% endblock %}

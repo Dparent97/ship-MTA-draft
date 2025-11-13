@@ -5,270 +5,183 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-10">
-
-        <!-- Status Overview Cards - Mobile Optimized -->
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-3">
-                <div class="card border-warning shadow-sm h-100">
-                    <div class="card-body text-center p-3">
-                        <div class="display-6 text-warning mb-2">{{ assigned_items|length if assigned_items else 0 }}</div>
-                        <h6 class="card-title mb-0 small">Assigned</h6>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card border-info shadow-sm h-100">
-                    <div class="card-body text-center p-3">
-                        <div class="display-6 text-info mb-2">{{ in_progress_items|length }}</div>
-                        <h6 class="card-title mb-0 small">In Progress</h6>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card border-success shadow-sm h-100">
-                    <div class="card-body text-center p-3">
-                        <div class="display-6 text-success mb-2">{{ completed_items|length }}</div>
-                        <h6 class="card-title mb-0 small">Completed</h6>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="card border-primary shadow-sm h-100">
-                    <div class="card-body text-center p-3">
-                        <div class="display-6 text-primary mb-2">{{ (assigned_items|length if assigned_items else 0) + in_progress_items|length + completed_items|length }}</div>
-                        <h6 class="card-title mb-0 small">Total Items</h6>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Assigned Items Banner (Always Visible) -->
         {% if assigned_items %}
-        <div class="card shadow-sm mb-4 border-warning border-2">
-            <div class="card-header bg-warning text-dark py-3">
-                <div class="d-flex align-items-center justify-content-between flex-wrap">
-                    <h5 class="mb-0">📋 Your Assigned Items</h5>
-                    <span class="badge bg-dark rounded-pill">{{ assigned_items|length }}</span>
-                </div>
+        <div class="card shadow mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0">📋 Your Assigned Items ({{ assigned_items|length }})</h4>
             </div>
-            <div class="card-body p-3 p-md-4">
-                <div class="row g-3">
-                    {% for item in assigned_items %}
-                    <div class="col-12">
-                        <div class="card border-warning shadow-sm">
-                            <div class="card-body p-3 p-md-4">
-                                <div class="d-flex justify-content-between align-items-start flex-wrap mb-3">
-                                    <h5 class="mb-2 mb-md-0">{{ item.item_number }}</h5>
-                                    <span class="badge bg-warning text-dark">{{ item.status }}</span>
-                                </div>
-                                <div class="row g-2 mb-3">
-                                    <div class="col-md-6">
-                                        <small class="text-muted d-block">Location</small>
-                                        <strong>{{ item.location }}</strong>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <small class="text-muted d-block">Assigned by</small>
-                                        <strong>{{ item.last_modified_by or 'Admin' }}</strong>
-                                    </div>
-                                </div>
-                                {% if item.revision_notes %}
-                                <div class="alert alert-info mb-3 p-2 p-md-3">
-                                    <strong class="d-block mb-1">📝 Revision Notes:</strong>
-                                    <small>{{ item.revision_notes }}</small>
-                                </div>
-                                {% endif %}
-                                <div class="d-grid">
-                                    <a href="{{ url_for('crew.edit_assigned_item', item_id=item.id) }}"
-                                       class="btn btn-primary">
-                                        Edit This Item
-                                    </a>
-                                </div>
-                            </div>
+            <div class="card-body">
+                {% for item in assigned_items %}
+                <div class="card mb-3 border-warning">
+                    <div class="card-body">
+                        <h5>{{ item.item_number }}</h5>
+                        <p class="mb-1"><strong>Location:</strong> {{ item.location }}</p>
+                        <p class="mb-1"><strong>Assigned by:</strong> {{ item.last_modified_by or 'Admin' }}</p>
+                        <p class="mb-1"><strong>Status:</strong> 
+                            <span class="badge bg-warning text-dark">{{ item.status }}</span>
+                        </p>
+                        {% if item.revision_notes %}
+                        <div class="alert alert-info mb-2 mt-2">
+                            <strong>📝 Revision Notes:</strong><br>
+                            {{ item.revision_notes }}
                         </div>
+                        {% endif %}
+                        <a href="{{ url_for('crew.edit_assigned_item', item_id=item.id) }}" 
+                           class="btn btn-primary">
+                            Edit This Item
+                        </a>
                     </div>
-                    {% endfor %}
                 </div>
+                {% endfor %}
             </div>
         </div>
         {% endif %}
-
+        
         <!-- Main Dashboard Card with Tabs -->
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white py-3">
-                <div class="d-flex align-items-center justify-content-between flex-wrap">
-                    <div>
-                        <h4 class="mb-1">Crew Dashboard</h4>
-                        <small class="opacity-75">Logged in as: <strong>{{ crew_name }}</strong></small>
-                    </div>
-                </div>
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h3 class="mb-0">Crew Dashboard</h3>
+                <small>Logged in as: <strong>{{ crew_name }}</strong></small>
             </div>
-            <div class="card-body p-0 p-md-3">
-                <!-- Tab Navigation - Mobile Optimized -->
-                <ul class="nav nav-tabs mb-4 border-0 px-3 px-md-0" id="crewDashboardTabs" role="tablist">
-                    <li class="nav-item flex-fill flex-md-grow-0" role="presentation">
-                        <button class="nav-link active w-100 px-2 px-md-3" id="submit-tab" data-bs-toggle="tab"
+            <div class="card-body">
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs mb-4" id="crewDashboardTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="submit-tab" data-bs-toggle="tab" 
                                 data-bs-target="#submit-pane" type="button" role="tab">
-                            <span class="d-none d-md-inline">Submit New</span>
-                            <span class="d-md-none">Submit</span>
+                            Submit New
                         </button>
                     </li>
-                    <li class="nav-item flex-fill flex-md-grow-0" role="presentation">
-                        <button class="nav-link w-100 px-2 px-md-3" id="progress-tab" data-bs-toggle="tab"
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="progress-tab" data-bs-toggle="tab" 
                                 data-bs-target="#progress-pane" type="button" role="tab">
-                            <span class="d-none d-md-inline">In Progress</span>
-                            <span class="d-md-none">Progress</span>
-                            <span class="badge bg-info ms-1">{{ in_progress_items|length }}</span>
+                            In Progress
+                            <span class="badge bg-secondary">{{ in_progress_items|length }}</span>
                         </button>
                     </li>
-                    <li class="nav-item flex-fill flex-md-grow-0" role="presentation">
-                        <button class="nav-link w-100 px-2 px-md-3" id="completed-tab" data-bs-toggle="tab"
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="completed-tab" data-bs-toggle="tab" 
                                 data-bs-target="#completed-pane" type="button" role="tab">
-                            <span class="d-none d-md-inline">Completed</span>
-                            <span class="d-md-none">Done</span>
-                            <span class="badge bg-success ms-1">{{ completed_items|length }}</span>
+                            Completed
+                            <span class="badge bg-success">{{ completed_items|length }}</span>
                         </button>
                     </li>
                 </ul>
 
                 <!-- Tab Content -->
-                <div class="tab-content px-3 px-md-0" id="crewDashboardTabContent">
-
+                <div class="tab-content" id="crewDashboardTabContent">
+                    
                     <!-- TAB 1: SUBMIT NEW -->
                     <div class="tab-pane fade show active" id="submit-pane" role="tabpanel">
                         <form method="POST" enctype="multipart/form-data" id="workItemForm">
-
-                            <!-- Item Information Card -->
-                            <div class="card mb-4 border-primary border-opacity-25 shadow-sm">
-                                <div class="card-header bg-primary bg-opacity-10">
-                                    <h6 class="mb-0 text-primary">📝 Item Information</h6>
+                            
+                            <!-- Item Number with Collapsible Reference Section -->
+                            <div class="mb-3">
+                                <label for="item_number" class="form-label">
+                                    Item Number
+                                    <small class="text-muted">(Auto-generated, or enter custom)</small>
+                                </label>
+                                <input type="text" class="form-control" id="item_number" 
+                                       name="item_number" value="{{ next_item_number }}" 
+                                       placeholder="e.g., DRAFT_0020 or 0101">
+                                
+                                <!-- Collapsible Reference Section -->
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#referenceSection">
+                                        📚 Reference existing item (optional)
+                                    </button>
                                 </div>
-                                <div class="card-body p-3 p-md-4">
-                                    <!-- Item Number with Collapsible Reference Section -->
-                                    <div class="mb-4">
-                                        <label for="item_number" class="form-label fw-semibold">
-                                            Item Number
-                                            <small class="text-muted fw-normal">(Auto-generated, or enter custom)</small>
-                                        </label>
-                                        <input type="text" class="form-control form-control-lg" id="item_number"
-                                               name="item_number" value="{{ next_item_number }}"
-                                               placeholder="e.g., DRAFT_0020 or 0101">
-
-                                        <!-- Collapsible Reference Section -->
-                                        <div class="mt-3">
-                                            <button class="btn btn-sm btn-outline-secondary" type="button"
-                                                    data-bs-toggle="collapse" data-bs-target="#referenceSection">
-                                                📚 Reference existing item (optional)
-                                            </button>
-                                        </div>
-
-                                        <div class="collapse mt-3" id="referenceSection">
-                                            <div class="card border-secondary">
-                                                <div class="card-body bg-light p-3">
-                                                    <div class="row g-3">
-                                                        <div class="col-md-6">
-                                                            <label class="form-label small fw-bold">EV Yard Items</label>
-                                                            <select class="form-select form-select-sm" id="ev_yard_select">
-                                                                <option value="">-- Select --</option>
-                                                                {% for item in ev_yard_items %}
-                                                                <option value="{{ item.split(' - ')[0] }}">{{ item }}</option>
-                                                                {% endfor %}
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <label class="form-label small fw-bold">Draft Items</label>
-                                                            <select class="form-select form-select-sm" id="draft_select">
-                                                                <option value="">-- Select --</option>
-                                                                {% for item in draft_items %}
-                                                                <option value="{{ item.split(' - ')[0] }}">{{ item }}</option>
-                                                                {% endfor %}
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <small class="text-muted d-block mt-2">Selecting an item will populate the item number field above.</small>
-                                                </div>
+                                
+                                <div class="collapse mt-3" id="referenceSection">
+                                    <div class="card card-body bg-light">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-2">
+                                                <label class="form-label small fw-bold">EV Yard Items</label>
+                                                <select class="form-select form-select-sm" id="ev_yard_select">
+                                                    <option value="">-- Select --</option>
+                                                    {% for item in ev_yard_items %}
+                                                    <option value="{{ item.split(' - ')[0] }}">{{ item }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-2">
+                                                <label class="form-label small fw-bold">Draft Items</label>
+                                                <select class="form-select form-select-sm" id="draft_select">
+                                                    <option value="">-- Select --</option>
+                                                    {% for item in draft_items %}
+                                                    <option value="{{ item.split(' - ')[0] }}">{{ item }}</option>
+                                                    {% endfor %}
+                                                </select>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <!-- Location -->
-                                    <div class="mb-0">
-                                        <label for="location" class="form-label fw-semibold">Location *</label>
-                                        <input type="text" class="form-control form-control-lg" id="location"
-                                               name="location" placeholder="e.g., Engine Room STBD AFT, Pilot House FWD PORT Console"
-                                               required spellcheck="true">
-                                        <small class="form-text text-muted d-block mt-2">
-                                            Be specific with location details including: compartment, side (PORT/STBD), position (FWD/AFT), deck level, frame numbers, equipment location
-                                        </small>
+                                        <small class="text-muted">Selecting an item will populate the item number field above.</small>
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Location -->
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Location *</label>
+                                <input type="text" class="form-control" id="location" 
+                                       name="location" placeholder="e.g., Engine Room STBD AFT, Pilot House FWD PORT Console" 
+                                       required spellcheck="true">
+                                <small class="form-text text-muted">
+                                    Be specific with location details including: compartment, side (PORT/STBD), position (FWD/AFT), deck level, frame numbers, equipment location
+                                </small>
+                            </div>
+                            
+                            <!-- Description -->
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description (Brief Summary) *</label>
+                                <textarea class="form-control" id="description" name="description" 
+                                          rows="2" maxlength="200" required spellcheck="true"
+                                          placeholder="Brief 1-2 sentence description (max 200 characters)"></textarea>
+                                <small class="form-text text-muted">
+                                    Example: "Port & Stbd ME Exhaust insulation overhaul"
+                                </small>
+                            </div>
+                            
+                            <!-- Detail -->
+                            <div class="mb-3">
+                                <label for="detail" class="form-label">Detail (Complete Description) *</label>
+                                <textarea class="form-control" id="detail" name="detail" 
+                                          rows="6" required spellcheck="true"
+                                          placeholder="Include: What needs to be done, Why, Scope of work, WO numbers, Equipment specs, Regulatory requirements"></textarea>
+                                <small class="form-text text-muted">
+                                    Provide comprehensive details including what needs to be done, why, scope, WO numbers, equipment specs, and any regulatory requirements.
+                                </small>
+                            </div>
+                            
+                            <!-- Operator Furnished Material -->
+                            <div class="mb-3">
+                                <label for="references" class="form-label">Operator Furnished Material (OFM)</label>
+                                <textarea class="form-control" id="references" name="references" 
+                                          rows="3" spellcheck="true"
+                                          placeholder="If known, list materials on order or onboard (e.g., part numbers, descriptions). Otherwise write 'None'."></textarea>
+                                <small class="form-text text-muted">
+                                    List any materials, parts, or equipment that need to be provided for this work item.
+                                </small>
+                            </div>
+                            
+                            <hr class="my-4">
 
-                            <!-- Work Description Card -->
-                            <div class="card mb-4 border-info border-opacity-25 shadow-sm">
-                                <div class="card-header bg-info bg-opacity-10">
-                                    <h6 class="mb-0 text-info">📋 Work Description</h6>
-                                </div>
-                                <div class="card-body p-3 p-md-4">
-                                    <!-- Description -->
-                                    <div class="mb-4">
-                                        <label for="description" class="form-label fw-semibold">Description (Brief Summary) *</label>
-                                        <textarea class="form-control" id="description" name="description"
-                                                  rows="2" maxlength="200" required spellcheck="true"
-                                                  placeholder="Brief 1-2 sentence description (max 200 characters)"></textarea>
-                                        <small class="form-text text-muted d-block mt-2">
-                                            Example: "Port & Stbd ME Exhaust insulation overhaul"
-                                        </small>
-                                    </div>
+                            <!-- Enhanced Photos Section -->
+                            <h5 class="mb-3">📸 Photos</h5>
+                            <p class="text-muted small mb-3">
+                                Drag and drop photos or click to upload (Maximum {{ max_photos }})
+                            </p>
 
-                                    <!-- Detail -->
-                                    <div class="mb-4">
-                                        <label for="detail" class="form-label fw-semibold">Detail (Complete Description) *</label>
-                                        <textarea class="form-control" id="detail" name="detail"
-                                                  rows="6" required spellcheck="true"
-                                                  placeholder="Include: What needs to be done, Why, Scope of work, WO numbers, Equipment specs, Regulatory requirements"></textarea>
-                                        <small class="form-text text-muted d-block mt-2">
-                                            Provide comprehensive details including what needs to be done, why, scope, WO numbers, equipment specs, and any regulatory requirements.
-                                        </small>
-                                    </div>
-
-                                    <!-- Operator Furnished Material -->
-                                    <div class="mb-0">
-                                        <label for="references" class="form-label fw-semibold">Operator Furnished Material (OFM)</label>
-                                        <textarea class="form-control" id="references" name="references"
-                                                  rows="3" spellcheck="true"
-                                                  placeholder="If known, list materials on order or onboard (e.g., part numbers, descriptions). Otherwise write 'None'."></textarea>
-                                        <small class="form-text text-muted d-block mt-2">
-                                            List any materials, parts, or equipment that need to be provided for this work item.
-                                        </small>
-                                    </div>
-                                </div>
+                            <div id="photoUploadContainer" data-max-photos="{{ max_photos }}" data-min-photos="{{ min_photos }}">
+                                <!-- Photo upload UI will be injected here by photo-upload.js -->
                             </div>
 
-                            <!-- Photos Card -->
-                            <div class="card mb-4 border-secondary border-opacity-25 shadow-sm">
-                                <div class="card-header bg-secondary bg-opacity-10">
-                                    <h6 class="mb-0 text-secondary">📸 Photos (Optional, Maximum {{ max_photos }})</h6>
-                                </div>
-                                <div class="card-body p-3 p-md-4">
-                                    <p class="text-muted small mb-3">
-                                        Tip: Use your device's camera to capture photos directly
-                                    </p>
-
-                                    <div id="photoContainer" class="mb-3">
-                                        <!-- Photo inputs will be added dynamically -->
-                                    </div>
-
-                                    <div class="d-grid">
-                                        <button type="button" class="btn btn-outline-secondary" id="addPhotoBtn">
-                                            📷 Add Photo
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            <hr class="my-4">
 
                             <!-- Submit Button -->
-                            <div class="d-grid gap-2 mb-3">
-                                <button type="submit" class="btn btn-primary btn-lg py-3">
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
                                     ✓ Submit Work Item
                                 </button>
                             </div>
@@ -277,23 +190,19 @@
                     
                     <!-- TAB 2: IN PROGRESS -->
                     <div class="tab-pane fade" id="progress-pane" role="tabpanel">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="mb-0">In Progress Items</h5>
-                            <span class="badge bg-info rounded-pill">{{ in_progress_items|length }}</span>
-                        </div>
-
+                        <h4 class="mb-3">In Progress Items ({{ in_progress_items|length }})</h4>
+                        
                         {% if in_progress_items %}
-                        <!-- Desktop Table View (hidden on mobile) -->
-                        <div class="table-responsive d-none d-lg-block">
-                            <table class="table table-hover align-middle">
-                                <thead class="table-light">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
                                     <tr>
                                         <th>Item #</th>
                                         <th>Location</th>
                                         <th>Description</th>
                                         <th>Status</th>
                                         <th>Submitted By</th>
-                                        <th class="text-center">Photos</th>
+                                        <th>Photos</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
@@ -305,24 +214,18 @@
                                         <td>{{ item.description|truncate(40) }}</td>
                                         <td><span class="badge bg-info">{{ item.status }}</span></td>
                                         <td>{{ item.submitter_name }}</td>
-                                        <td class="text-center">
-                                            {% if item.photos|length > 0 %}
-                                            <span class="badge bg-secondary">{{ item.photos|length }}</span>
-                                            {% else %}
-                                            <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
+                                        <td>{{ item.photos|length }}</td>
                                         <td>
                                             {% if item.submitter_name == crew_name or item.assigned_to == crew_name %}
                                                 {% if item.status in ['Needs Revision', 'Awaiting Photos'] %}
-                                                <a href="{{ url_for('crew.edit_assigned_item', item_id=item.id) }}"
+                                                <a href="{{ url_for('crew.edit_assigned_item', item_id=item.id) }}" 
                                                    class="btn btn-sm btn-warning">Edit</a>
                                                 {% else %}
-                                                <a href="{{ url_for('crew.view_item', item_id=item.id) }}"
+                                                <a href="{{ url_for('crew.view_item', item_id=item.id) }}" 
                                                    class="btn btn-sm btn-info">View</a>
                                                 {% endif %}
                                             {% else %}
-                                            <a href="{{ url_for('crew.view_item', item_id=item.id) }}"
+                                            <a href="{{ url_for('crew.view_item', item_id=item.id) }}" 
                                                class="btn btn-sm btn-info">View</a>
                                             {% endif %}
                                         </td>
@@ -330,46 +233,6 @@
                                     {% endfor %}
                                 </tbody>
                             </table>
-                        </div>
-
-                        <!-- Mobile Card View (hidden on desktop) -->
-                        <div class="d-lg-none">
-                            <div class="row g-3">
-                                {% for item in in_progress_items %}
-                                <div class="col-12">
-                                    <div class="card shadow-sm border-info border-opacity-25">
-                                        <div class="card-body p-3">
-                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <h6 class="mb-0"><strong>{{ item.item_number }}</strong></h6>
-                                                <span class="badge bg-info">{{ item.status }}</span>
-                                            </div>
-                                            <p class="small text-muted mb-2"><strong>Location:</strong> {{ item.location|truncate(50) }}</p>
-                                            <p class="small mb-2">{{ item.description|truncate(60) }}</p>
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <small class="text-muted">By: {{ item.submitter_name }}</small>
-                                                {% if item.photos|length > 0 %}
-                                                <small class="text-muted">📷 {{ item.photos|length }}</small>
-                                                {% endif %}
-                                            </div>
-                                            <div class="d-grid">
-                                                {% if item.submitter_name == crew_name or item.assigned_to == crew_name %}
-                                                    {% if item.status in ['Needs Revision', 'Awaiting Photos'] %}
-                                                    <a href="{{ url_for('crew.edit_assigned_item', item_id=item.id) }}"
-                                                       class="btn btn-sm btn-warning">Edit</a>
-                                                    {% else %}
-                                                    <a href="{{ url_for('crew.view_item', item_id=item.id) }}"
-                                                       class="btn btn-sm btn-info">View Details</a>
-                                                    {% endif %}
-                                                {% else %}
-                                                <a href="{{ url_for('crew.view_item', item_id=item.id) }}"
-                                                   class="btn btn-sm btn-info">View Details</a>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
                         </div>
                         {% else %}
                         <div class="alert alert-info">
@@ -380,22 +243,18 @@
                     
                     <!-- TAB 3: COMPLETED -->
                     <div class="tab-pane fade" id="completed-pane" role="tabpanel">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="mb-0">Completed Items</h5>
-                            <span class="badge bg-success rounded-pill">{{ completed_items|length }}</span>
-                        </div>
-
+                        <h4 class="mb-3">Completed Items ({{ completed_items|length }})</h4>
+                        
                         {% if completed_items %}
-                        <!-- Desktop Table View (hidden on mobile) -->
-                        <div class="table-responsive d-none d-lg-block">
-                            <table class="table table-hover align-middle">
-                                <thead class="table-light">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
                                     <tr>
                                         <th>Item #</th>
                                         <th>Location</th>
                                         <th>Description</th>
                                         <th>Submitted By</th>
-                                        <th class="text-center">Photos</th>
+                                        <th>Photos</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
@@ -406,51 +265,15 @@
                                         <td>{{ item.location|truncate(30) }}</td>
                                         <td>{{ item.description|truncate(40) }}</td>
                                         <td>{{ item.submitter_name }}</td>
-                                        <td class="text-center">
-                                            {% if item.photos|length > 0 %}
-                                            <span class="badge bg-secondary">{{ item.photos|length }}</span>
-                                            {% else %}
-                                            <span class="text-muted">-</span>
-                                            {% endif %}
-                                        </td>
+                                        <td>{{ item.photos|length }}</td>
                                         <td>
-                                            <a href="{{ url_for('crew.view_item', item_id=item.id) }}"
+                                            <a href="{{ url_for('crew.view_item', item_id=item.id) }}" 
                                                class="btn btn-sm btn-success">View</a>
                                         </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
-                        </div>
-
-                        <!-- Mobile Card View (hidden on desktop) -->
-                        <div class="d-lg-none">
-                            <div class="row g-3">
-                                {% for item in completed_items %}
-                                <div class="col-12">
-                                    <div class="card shadow-sm border-success border-opacity-25">
-                                        <div class="card-body p-3">
-                                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                                <h6 class="mb-0"><strong>{{ item.item_number }}</strong></h6>
-                                                <span class="badge bg-success">Completed</span>
-                                            </div>
-                                            <p class="small text-muted mb-2"><strong>Location:</strong> {{ item.location|truncate(50) }}</p>
-                                            <p class="small mb-2">{{ item.description|truncate(60) }}</p>
-                                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                                <small class="text-muted">By: {{ item.submitter_name }}</small>
-                                                {% if item.photos|length > 0 %}
-                                                <small class="text-muted">📷 {{ item.photos|length }}</small>
-                                                {% endif %}
-                                            </div>
-                                            <div class="d-grid">
-                                                <a href="{{ url_for('crew.view_item', item_id=item.id) }}"
-                                                   class="btn btn-sm btn-success">View Details</a>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
                         </div>
                         {% else %}
                         <div class="alert alert-info">
@@ -467,6 +290,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/photo-upload.js') }}"></script>
 <script>
 // Reference dropdown selection - populate main item number input
 document.getElementById('ev_yard_select').addEventListener('change', function() {
@@ -483,73 +307,41 @@ document.getElementById('draft_select').addEventListener('change', function() {
     }
 });
 
-// Photo management
-let photoCount = 0;
-const minPhotos = {{ min_photos }};
-const maxPhotos = {{ max_photos }};
-
-function addPhotoInput() {
-    if (photoCount >= maxPhotos) {
-        alert(`Maximum ${maxPhotos} photos allowed`);
-        return;
-    }
-
-    photoCount++;
-    const photoDiv = document.createElement('div');
-    photoDiv.className = 'card border-secondary mb-3 photo-input';
-    photoDiv.id = `photo-${photoCount}`;
-    photoDiv.innerHTML = `
-        <div class="card-body p-3">
-            <div class="mb-3">
-                <label class="form-label fw-semibold">📷 Photo ${photoCount}</label>
-                <input type="file" class="form-control" name="photos"
-                       accept="image/jpeg,image/jpg,image/png,image/heic,image/heif"
-                       capture="environment">
-                <small class="form-text text-muted d-block mt-1">Tap to use camera or choose from gallery</small>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Caption (Optional)</label>
-                <input type="text" class="form-control" name="photo_captions"
-                       placeholder="Describe what this photo shows">
-            </div>
-            <div class="d-grid">
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removePhoto(${photoCount})">
-                    🗑️ Remove Photo ${photoCount}
-                </button>
-            </div>
-        </div>
-    `;
-
-    document.getElementById('photoContainer').appendChild(photoDiv);
-    updateAddPhotoButton();
-}
-
-function removePhoto(num) {
-    const photoDiv = document.getElementById(`photo-${num}`);
-    if (photoDiv) {
-        photoDiv.remove();
-        photoCount--;
-        updateAddPhotoButton();
-    }
-}
-
-function updateAddPhotoButton() {
-    const btn = document.getElementById('addPhotoBtn');
-    if (photoCount >= maxPhotos) {
-        btn.disabled = true;
-        btn.textContent = `Maximum ${maxPhotos} photos reached`;
-    } else {
-        btn.disabled = false;
-        btn.textContent = '📷 Add Photo';
-    }
-}
-
-// Add event listener to the Add Photo button
-document.getElementById('addPhotoBtn').addEventListener('click', addPhotoInput);
-
-// Form validation
+// Form submission - append photos to form data
 document.getElementById('workItemForm').addEventListener('submit', function(e) {
-    // Could add other validation here if needed
+    e.preventDefault();
+
+    // Create FormData from the form
+    const formData = new FormData(this);
+
+    // Remove any existing photo data (old system compatibility)
+    formData.delete('photos');
+    formData.delete('photo_captions');
+
+    // Add photos from the new upload manager
+    if (window.photoUploadManager) {
+        window.photoUploadManager.appendToFormData(formData);
+    }
+
+    // Submit the form
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            // Redirect to success page or reload
+            window.location.href = response.url;
+        } else {
+            return response.text().then(text => {
+                throw new Error('Form submission failed: ' + text);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an error submitting the form. Please try again.');
+    });
 });
 </script>
 {% endblock %}
