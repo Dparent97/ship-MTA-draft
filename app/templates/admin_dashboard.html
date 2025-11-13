@@ -86,21 +86,29 @@
             </div>
         </div>
 
-        <!-- Photo Thumbnail -->
-        <div class="card-img-container position-relative">
+        <!-- Photo Tiles - Compact Grid -->
+        <div class="photo-tiles-container">
             {% if item.photos and item.photos|length > 0 %}
-                <img src="{{ url_for('serve_upload', filename=item.photos[0].filename) }}"
-                     class="card-img-top work-item-thumbnail"
-                     alt="{{ item.item_number }}"
-                     loading="lazy">
-                {% if item.photos|length > 1 %}
-                    <span class="position-absolute top-0 end-0 m-2 badge bg-dark bg-opacity-75">
-                        <i class="bi bi-images"></i> {{ item.photos|length }}
-                    </span>
-                {% endif %}
+                <div class="photo-tiles-grid">
+                    {% for photo in item.photos[:4] %}
+                        <div class="photo-tile">
+                            <img src="{{ url_for('serve_upload', filename=photo.filename) }}"
+                                 alt="Photo {{ loop.index }}"
+                                 loading="lazy">
+                        </div>
+                    {% endfor %}
+                    {% if item.photos|length > 4 %}
+                        <div class="photo-tile photo-tile-more">
+                            <div class="photo-tile-overlay">
+                                <span>+{{ item.photos|length - 4 }}</span>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
             {% else %}
-                <div class="card-img-top work-item-thumbnail-placeholder d-flex align-items-center justify-content-center bg-light">
-                    <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                <div class="photo-tiles-placeholder">
+                    <i class="bi bi-image text-muted"></i>
+                    <span class="text-muted small">No photos</span>
                 </div>
             {% endif %}
         </div>
