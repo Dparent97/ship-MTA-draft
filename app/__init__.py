@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, send_from_directory, session, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 import os
 
@@ -21,6 +21,16 @@ def create_app(config_class='config.Config'):
     app.register_blueprint(auth.bp)
     app.register_blueprint(crew.bp)
     app.register_blueprint(admin.bp)
+
+    # Shared upload endpoint for both admin and crew
+    @app.route('/uploads/<filename>')
+    def serve_upload(filename):
+        """Serve uploaded photos (accessible to both admin and crew)."""
+        # Check if user is authenticated (either admin or crew)
+        if not session.get('is_admin') and not session.get('crew_authenticated'):
+            return redirect(url_for('auth.crew_login'))
+        
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
     with app.app_context():
         db.create_all()

@@ -74,10 +74,15 @@ def submit_form():
         photo_files = request.files.getlist('photos')
         photo_captions = request.form.getlist('photo_captions')
         
-        # Filter out empty photo uploads
-        valid_photos = [f for f in photo_files if f and f.filename]
+        # Filter photos and captions together, keeping them synchronized
+        # This ensures each photo file is paired with its correct caption
+        valid_photo_pairs = [
+            (photo, caption) 
+            for photo, caption in zip(photo_files, photo_captions) 
+            if photo and photo.filename
+        ]
 
-        if len(valid_photos) > current_app.config['PHOTO_MAX_COUNT']:
+        if len(valid_photo_pairs) > current_app.config['PHOTO_MAX_COUNT']:
             flash(f'Maximum {current_app.config["PHOTO_MAX_COUNT"]} photos allowed', 'danger')
             return redirect(url_for('crew.submit_form'))
 
@@ -85,8 +90,8 @@ def submit_form():
             db.session.add(work_item)
             db.session.flush()  # Get the ID without committing
 
-            # Process photos
-            for idx, photo_file in enumerate(valid_photos):
+            # Process photos with their correct captions
+            for idx, (photo_file, caption) in enumerate(valid_photo_pairs):
                 if photo_file and allowed_file(photo_file.filename):
                     # Generate unique filename
                     filename = generate_unique_filename(photo_file.filename)
@@ -99,10 +104,7 @@ def submit_form():
                     _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
                     final_filename = os.path.basename(final_path)
 
-                    # Get caption if provided, otherwise use empty string
-                    caption = photo_captions[idx] if idx < len(photo_captions) else ''
-
-                    # Create photo record
+                    # Create photo record with the correct caption
                     photo = Photo(
                         filename=final_filename,
                         caption=caption or '',
@@ -292,10 +294,9 @@ def view_item(item_id):
     work_item = WorkItem.query.get_or_404(item_id)
     crew_name = session.get('crew_name')
     
-    # Determine if this user can edit (for display purposes)
-    can_edit = (work_item.submitter_name == crew_name or 
-                work_item.assigned_to == crew_name) and \
-               work_item.status not in ['Completed Review']
+    # Determine if this user can edit (must match edit_assigned_item permissions)
+    can_edit = (work_item.assigned_to == crew_name) and \
+               (work_item.status in ['Needs Revision', 'Awaiting Photos'])
     
     return render_template('crew_view.html',
                          work_item=work_item,

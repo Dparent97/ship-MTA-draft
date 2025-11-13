@@ -61,7 +61,7 @@
                             {% for photo in work_item.photos %}
                             <div class="col-md-6 col-12">
                                 <div class="card">
-                                    <img src="{{ url_for('admin.serve_upload', filename=photo.filename) }}"
+                                    <img src="{{ url_for('serve_upload', filename=photo.filename) }}"
                                          class="card-img-top" alt="Photo {{ loop.index }}"
                                          style="max-height: 300px; object-fit: cover; cursor: pointer;"
                                          onclick="this.style.maxHeight = this.style.maxHeight === '300px' ? 'none' : '300px'">
