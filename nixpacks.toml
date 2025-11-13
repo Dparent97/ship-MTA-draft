@@ -1,8 +1,13 @@
 [phases.setup]
 nixPkgs = ["python310", "postgresql"]
+nixOverlays = ["https://github.com/railwayapp/nix-verticals/archive/main.tar.gz"]
+nixpkgsArchive = "bc8f8d1be58e8c8383e683a06e1e1e57893fff87"
 
 [phases.install]
-cmds = ["pip install -r requirements.txt"]
+cmds = [
+    "python -m pip install --upgrade pip",
+    "python -m pip install -r requirements.txt"
+]
 
 [phases.build]
 cmds = ["python -m compileall ."]
