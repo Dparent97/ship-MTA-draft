@@ -1209,3 +1209,149 @@ a:hover {
         opacity: 1;
     }
 }
+||||||| 7da8b4c
+
+/* Modern Work Items Grid Layout */
+.work-items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .work-items-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    .work-items-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1025px) {
+    .work-items-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Work Item Card Styling */
+.work-item-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+}
+
+.work-item-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.work-item-thumbnail {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.work-item-thumbnail-placeholder {
+    width: 100%;
+    height: 200px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.card-img-container {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Status Badge Enhancements */
+.status-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35em 0.65em;
+    border-radius: 0.375rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Text truncation for descriptions */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.5;
+    max-height: 3em;
+}
+
+/* Work item meta information */
+.work-item-meta i {
+    width: 16px;
+    margin-right: 4px;
+}
+
+/* Toast Notification System */
+.custom-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 300px;
+    max-width: 400px;
+    z-index: 9999;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 768px) {
+    .custom-toast {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        min-width: auto;
+        max-width: none;
+    }
+}
+
+/* Enhanced card shadows */
+.shadow-sm {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+}
+
+/* Button icon spacing */
+.btn i {
+    margin-right: 4px;
+}
+
+/* Card footer styling */
+.card-footer {
+    background-color: #f8f9fa;
+}
+
+.work-item-card .card-footer {
+    padding: 1rem;
+}
+
+/* Improve button group spacing in cards */
+.work-item-card .btn-group {
+    width: 100%;
+}
+
+.work-item-card .btn-group .btn {
+    flex: 1;
+}

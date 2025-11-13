@@ -87,13 +87,27 @@ def dashboard():
     # Get filter parameters
     status_filter = request.args.get('status', 'all')
     sort_by = request.args.get('sort', 'date_desc')
+    search_query = request.args.get('search', '').strip()
 
     # Base query
     query = WorkItem.query
 
-    # Apply filters
+    # Apply status filter
     if status_filter != 'all':
         query = query.filter_by(status=status_filter)
+
+    # Apply search filter
+    if search_query:
+        search_pattern = f'%{search_query}%'
+        query = query.filter(
+            db.or_(
+                WorkItem.item_number.ilike(search_pattern),
+                WorkItem.description.ilike(search_pattern),
+                WorkItem.location.ilike(search_pattern),
+                WorkItem.submitter_name.ilike(search_pattern),
+                WorkItem.detail.ilike(search_pattern)
+            )
+        )
 
     # Apply sorting
     if sort_by == 'date_asc':
@@ -107,10 +121,11 @@ def dashboard():
 
     work_items = query.all()
 
-    return render_template('admin_dashboard.html', 
+    return render_template('admin_dashboard.html',
                          work_items=work_items,
                          status_filter=status_filter,
                          sort_by=sort_by,
+                         search_query=search_query,
                          format_datetime=format_datetime)
 
 
