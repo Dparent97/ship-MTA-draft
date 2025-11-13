@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Submit Work Item{% endblock %}
+{% block title %}Crew Dashboard{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-10">
+        <!-- Assigned Items Banner (Always Visible) -->
         {% if assigned_items %}
         <div class="card shadow mb-4">
             <div class="card-header bg-warning text-dark">
@@ -26,10 +27,10 @@
                             {{ item.revision_notes }}
                         </div>
                         {% endif %}
-                        <button type="button" class="btn btn-primary" 
-                                onclick="loadAssignment({{ item.id }})">
-                            Load & Edit This Item
-                        </button>
+                        <a href="{{ url_for('crew.edit_assigned_item', item_id=item.id) }}" 
+                           class="btn btn-primary">
+                            Edit This Item
+                        </a>
                     </div>
                 </div>
                 {% endfor %}
@@ -37,131 +38,254 @@
         </div>
         {% endif %}
         
+        <!-- Main Dashboard Card with Tabs -->
         <div class="card shadow">
             <div class="card-header bg-primary text-white">
-                <h3 class="mb-0">Submit Work Item Draft</h3>
-                <small>Submitting as: <strong>{{ crew_name }}</strong></small>
+                <h3 class="mb-0">Crew Dashboard</h3>
+                <small>Logged in as: <strong>{{ crew_name }}</strong></small>
             </div>
             <div class="card-body">
-                <form method="POST" enctype="multipart/form-data" id="workItemForm">
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs mb-4" id="crewDashboardTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="submit-tab" data-bs-toggle="tab" 
+                                data-bs-target="#submit-pane" type="button" role="tab">
+                            Submit New
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="progress-tab" data-bs-toggle="tab" 
+                                data-bs-target="#progress-pane" type="button" role="tab">
+                            In Progress
+                            <span class="badge bg-secondary">{{ in_progress_items|length }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="completed-tab" data-bs-toggle="tab" 
+                                data-bs-target="#completed-pane" type="button" role="tab">
+                            Completed
+                            <span class="badge bg-success">{{ completed_items|length }}</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="crewDashboardTabContent">
                     
-                    <!-- Item Number Selection -->
-                    <div class="mb-3">
-                        <label class="form-label">
-                            Item Number
-                            <small class="text-muted">(Select from lists or enter custom)</small>
-                        </label>
-                        
-                        <!-- Radio buttons for selection mode -->
-                        <div class="btn-group w-100 mb-2" role="group">
-                    <input type="radio" class="btn-check" name="item_mode" id="mode_custom" value="custom" checked>
-                    <label class="btn btn-outline-primary" for="mode_custom">New</label>
+                    <!-- TAB 1: SUBMIT NEW -->
+                    <div class="tab-pane fade show active" id="submit-pane" role="tabpanel">
+                        <form method="POST" enctype="multipart/form-data" id="workItemForm">
                             
-                            <input type="radio" class="btn-check" name="item_mode" id="mode_ev" value="ev">
-                            <label class="btn btn-outline-primary" for="mode_ev">EV Yard Items</label>
+                            <!-- Item Number with Collapsible Reference Section -->
+                            <div class="mb-3">
+                                <label for="item_number" class="form-label">
+                                    Item Number
+                                    <small class="text-muted">(Auto-generated, or enter custom)</small>
+                                </label>
+                                <input type="text" class="form-control" id="item_number" 
+                                       name="item_number" value="{{ next_item_number }}" 
+                                       placeholder="e.g., DRAFT_0020 or 0101">
+                                
+                                <!-- Collapsible Reference Section -->
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                            data-bs-toggle="collapse" data-bs-target="#referenceSection">
+                                        📚 Reference existing item (optional)
+                                    </button>
+                                </div>
+                                
+                                <div class="collapse mt-3" id="referenceSection">
+                                    <div class="card card-body bg-light">
+                                        <div class="row">
+                                            <div class="col-md-6 mb-2">
+                                                <label class="form-label small fw-bold">EV Yard Items</label>
+                                                <select class="form-select form-select-sm" id="ev_yard_select">
+                                                    <option value="">-- Select --</option>
+                                                    {% for item in ev_yard_items %}
+                                                    <option value="{{ item.split(' - ')[0] }}">{{ item }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 mb-2">
+                                                <label class="form-label small fw-bold">Draft Items</label>
+                                                <select class="form-select form-select-sm" id="draft_select">
+                                                    <option value="">-- Select --</option>
+                                                    {% for item in draft_items %}
+                                                    <option value="{{ item.split(' - ')[0] }}">{{ item }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">Selecting an item will populate the item number field above.</small>
+                                    </div>
+                                </div>
+                            </div>
                             
-                            <input type="radio" class="btn-check" name="item_mode" id="mode_draft" value="draft">
-                            <label class="btn btn-outline-primary" for="mode_draft">Draft Items</label>
-                        </div>
-                        
-                        <!-- Custom input (default) -->
-                        <input type="text" class="form-control" id="item_number_custom" 
-                               name="item_number" value="{{ next_item_number }}" placeholder="Enter custom item number">
-                        
-                        <!-- EV Yard Items dropdown (hidden by default) -->
-                        <select class="form-select d-none" id="item_number_ev" disabled>
-                            <option value="">-- Select EV Yard Item --</option>
-                            {% for item in ev_yard_items %}
-                            <option value="{{ item }}">{{ item }}</option>
-                            {% endfor %}
-                        </select>
-                        
-                        <!-- Draft Items dropdown (hidden by default) -->
-                        <select class="form-select d-none" id="item_number_draft" disabled>
-                            <option value="">-- Select Draft Item --</option>
-                            {% for item in draft_items %}
-                            <option value="{{ item }}">{{ item }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <!-- Location -->
-                    <div class="mb-3">
-                        <label for="location" class="form-label">Location *</label>
-                        <input type="text" class="form-control" id="location" 
-                               name="location" placeholder="e.g., Engine Room STBD AFT, Pilot House FWD PORT Console" 
-                               required spellcheck="true">
-                        <small class="form-text text-muted">
-                            Be specific with location details including: compartment, side (PORT/STBD), position (FWD/AFT), deck level, frame numbers, equipment location
-                        </small>
-                    </div>
-                    
-                    <!-- Description -->
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description (Brief Summary) *</label>
-                        <textarea class="form-control" id="description" name="description" 
-                                  rows="2" maxlength="200" required spellcheck="true"
-                                  placeholder="Brief 1-2 sentence description (max 200 characters)"></textarea>
-                        <small class="form-text text-muted">
-                            Example: "Port & Stbd ME Exhaust insulation overhaul"
-                        </small>
-                    </div>
-                    
-                    <!-- Detail -->
-                    <div class="mb-3">
-                        <label for="detail" class="form-label">Detail (Complete Description) *</label>
-                        <textarea class="form-control" id="detail" name="detail" 
-                                  rows="6" required spellcheck="true"
-                                  placeholder="Include: What needs to be done, Why, Scope of work, WO numbers, Equipment specs, Regulatory requirements"></textarea>
-                        <small class="form-text text-muted">
-                            Provide comprehensive details including what needs to be done, why, scope, WO numbers, equipment specs, and any regulatory requirements.
-                        </small>
-                    </div>
-                    
-                    <!-- Operator Furnished Material -->
-                    <div class="mb-3">
-                        <label for="references" class="form-label">Operator Furnished Material (OFM)</label>
-                        <textarea class="form-control" id="references" name="references" 
-                                  rows="3" spellcheck="true"
-                                  placeholder="If known, list materials on order or onboard (e.g., part numbers, descriptions). Otherwise write 'None'."></textarea>
-                        <small class="form-text text-muted">
-                            List any materials, parts, or equipment that need to be provided for this work item.
-                        </small>
-                    </div>
-                    
-                    <hr class="my-4">
-                    
-                    <!-- Photos Section -->
-                    <h5 class="mb-3">📸 Photos (Optional, Maximum {{ max_photos }})</h5>
-                    <p class="text-muted small mb-3">
-                        Tip: Use your device's camera to capture photos directly
-                    </p>
+                            <!-- Location -->
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Location *</label>
+                                <input type="text" class="form-control" id="location" 
+                                       name="location" placeholder="e.g., Engine Room STBD AFT, Pilot House FWD PORT Console" 
+                                       required spellcheck="true">
+                                <small class="form-text text-muted">
+                                    Be specific with location details including: compartment, side (PORT/STBD), position (FWD/AFT), deck level, frame numbers, equipment location
+                                </small>
+                            </div>
+                            
+                            <!-- Description -->
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description (Brief Summary) *</label>
+                                <textarea class="form-control" id="description" name="description" 
+                                          rows="2" maxlength="200" required spellcheck="true"
+                                          placeholder="Brief 1-2 sentence description (max 200 characters)"></textarea>
+                                <small class="form-text text-muted">
+                                    Example: "Port & Stbd ME Exhaust insulation overhaul"
+                                </small>
+                            </div>
+                            
+                            <!-- Detail -->
+                            <div class="mb-3">
+                                <label for="detail" class="form-label">Detail (Complete Description) *</label>
+                                <textarea class="form-control" id="detail" name="detail" 
+                                          rows="6" required spellcheck="true"
+                                          placeholder="Include: What needs to be done, Why, Scope of work, WO numbers, Equipment specs, Regulatory requirements"></textarea>
+                                <small class="form-text text-muted">
+                                    Provide comprehensive details including what needs to be done, why, scope, WO numbers, equipment specs, and any regulatory requirements.
+                                </small>
+                            </div>
+                            
+                            <!-- Operator Furnished Material -->
+                            <div class="mb-3">
+                                <label for="references" class="form-label">Operator Furnished Material (OFM)</label>
+                                <textarea class="form-control" id="references" name="references" 
+                                          rows="3" spellcheck="true"
+                                          placeholder="If known, list materials on order or onboard (e.g., part numbers, descriptions). Otherwise write 'None'."></textarea>
+                                <small class="form-text text-muted">
+                                    List any materials, parts, or equipment that need to be provided for this work item.
+                                </small>
+                            </div>
+                            
+                            <hr class="my-4">
+                            
+                            <!-- Photos Section -->
+                            <h5 class="mb-3">📸 Photos (Optional, Maximum {{ max_photos }})</h5>
+                            <p class="text-muted small mb-3">
+                                Tip: Use your device's camera to capture photos directly
+                            </p>
 
-                    <div id="photoContainer">
-                        <!-- Photo inputs will be added dynamically -->
-                    </div>
+                            <div id="photoContainer">
+                                <!-- Photo inputs will be added dynamically -->
+                            </div>
 
-                    <button type="button" class="btn btn-secondary mb-3 w-100" id="addPhotoBtn">
-                        📷 Add Photo
-                    </button>
-
-                    <hr class="my-4">
-
-                    <!-- Submit Button - Desktop -->
-                    <div class="d-none d-md-block">
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                ✓ Submit Work Item
+                            <button type="button" class="btn btn-secondary mb-3 w-100" id="addPhotoBtn">
+                                📷 Add Photo
                             </button>
-                        </div>
-                    </div>
-                </form>
 
-                <!-- Mobile Fixed Bottom Submit Button -->
-                <div class="d-md-none mobile-fixed-bottom">
-                    <button type="submit" form="workItemForm" class="btn btn-primary btn-lg w-100">
-                        ✓ Submit Work Item
-                    </button>
+                            <hr class="my-4">
+
+                            <!-- Submit Button -->
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    ✓ Submit Work Item
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <!-- TAB 2: IN PROGRESS -->
+                    <div class="tab-pane fade" id="progress-pane" role="tabpanel">
+                        <h4 class="mb-3">In Progress Items ({{ in_progress_items|length }})</h4>
+                        
+                        {% if in_progress_items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Item #</th>
+                                        <th>Location</th>
+                                        <th>Description</th>
+                                        <th>Status</th>
+                                        <th>Submitted By</th>
+                                        <th>Photos</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in in_progress_items %}
+                                    <tr>
+                                        <td><strong>{{ item.item_number }}</strong></td>
+                                        <td>{{ item.location|truncate(30) }}</td>
+                                        <td>{{ item.description|truncate(40) }}</td>
+                                        <td><span class="badge bg-info">{{ item.status }}</span></td>
+                                        <td>{{ item.submitter_name }}</td>
+                                        <td>{{ item.photos|length }}</td>
+                                        <td>
+                                            {% if item.submitter_name == crew_name or item.assigned_to == crew_name %}
+                                                {% if item.status in ['Needs Revision', 'Awaiting Photos'] %}
+                                                <a href="{{ url_for('crew.edit_assigned_item', item_id=item.id) }}" 
+                                                   class="btn btn-sm btn-warning">Edit</a>
+                                                {% else %}
+                                                <a href="{{ url_for('crew.view_item', item_id=item.id) }}" 
+                                                   class="btn btn-sm btn-info">View</a>
+                                                {% endif %}
+                                            {% else %}
+                                            <a href="{{ url_for('crew.view_item', item_id=item.id) }}" 
+                                               class="btn btn-sm btn-info">View</a>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <p class="mb-0">No items in progress at this time.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- TAB 3: COMPLETED -->
+                    <div class="tab-pane fade" id="completed-pane" role="tabpanel">
+                        <h4 class="mb-3">Completed Items ({{ completed_items|length }})</h4>
+                        
+                        {% if completed_items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Item #</th>
+                                        <th>Location</th>
+                                        <th>Description</th>
+                                        <th>Submitted By</th>
+                                        <th>Photos</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in completed_items %}
+                                    <tr>
+                                        <td><strong>{{ item.item_number }}</strong></td>
+                                        <td>{{ item.location|truncate(30) }}</td>
+                                        <td>{{ item.description|truncate(40) }}</td>
+                                        <td>{{ item.submitter_name }}</td>
+                                        <td>{{ item.photos|length }}</td>
+                                        <td>
+                                            <a href="{{ url_for('crew.view_item', item_id=item.id) }}" 
+                                               class="btn btn-sm btn-success">View</a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <p class="mb-0">No completed items yet.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
                 </div>
             </div>
         </div>
@@ -171,87 +295,19 @@
 
 {% block extra_js %}
 <script>
-// Add class to body for mobile fixed bottom padding
-if (window.innerWidth < 768) {
-    document.body.classList.add('has-fixed-bottom');
-}
-
-// Handle window resize
-window.addEventListener('resize', function() {
-    if (window.innerWidth < 768) {
-        document.body.classList.add('has-fixed-bottom');
-    } else {
-        document.body.classList.remove('has-fixed-bottom');
+// Reference dropdown selection - populate main item number input
+document.getElementById('ev_yard_select').addEventListener('change', function() {
+    if (this.value) {
+        document.getElementById('item_number').value = this.value;
+        document.getElementById('draft_select').value = ''; // Clear other dropdown
     }
 });
 
-// Load assignment function
-function loadAssignment(itemId) {
-    fetch(`/crew/load-assignment/${itemId}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert(data.error);
-                return;
-            }
-            
-            // Populate form fields
-            document.getElementById('item_number_custom').value = data.item_number;
-            document.getElementById('item_number_custom').readOnly = true;  // Can't change item number
-            document.getElementById('location').value = data.location;
-            document.getElementById('description').value = data.description;
-            document.getElementById('detail').value = data.detail;
-            document.getElementById('references').value = data.references;
-            
-            // Show revision notes if present
-            if (data.revision_notes) {
-                alert('⚠️ REVISION NOTES:\n\n' + data.revision_notes + '\n\nPlease address these points before resubmitting.');
-            }
-            
-            // Scroll to form
-            document.getElementById('workItemForm').scrollIntoView({ behavior: 'smooth' });
-        })
-        .catch(error => {
-            alert('Error loading assignment: ' + error);
-        });
-}
-
-// Item number mode switching
-const modeRadios = document.querySelectorAll('input[name="item_mode"]');
-const customInput = document.getElementById('item_number_custom');
-const evSelect = document.getElementById('item_number_ev');
-const draftSelect = document.getElementById('item_number_draft');
-
-modeRadios.forEach(radio => {
-    radio.addEventListener('change', function() {
-        // Hide all and disable
-        customInput.classList.add('d-none');
-        customInput.disabled = true;
-        customInput.removeAttribute('name');
-        
-        evSelect.classList.add('d-none');
-        evSelect.disabled = true;
-        evSelect.removeAttribute('name');
-        
-        draftSelect.classList.add('d-none');
-        draftSelect.disabled = true;
-        draftSelect.removeAttribute('name');
-        
-        // Show selected mode
-        if (this.value === 'custom') {
-            customInput.classList.remove('d-none');
-            customInput.disabled = false;
-            customInput.setAttribute('name', 'item_number');
-        } else if (this.value === 'ev') {
-            evSelect.classList.remove('d-none');
-            evSelect.disabled = false;
-            evSelect.setAttribute('name', 'item_number');
-        } else if (this.value === 'draft') {
-            draftSelect.classList.remove('d-none');
-            draftSelect.disabled = false;
-            draftSelect.setAttribute('name', 'item_number');
-        }
-    });
+document.getElementById('draft_select').addEventListener('change', function() {
+    if (this.value) {
+        document.getElementById('item_number').value = this.value;
+        document.getElementById('ev_yard_select').value = ''; // Clear other dropdown
+    }
 });
 
 // Photo management
@@ -311,20 +367,16 @@ function updateAddPhotoButton() {
         btn.textContent = `Maximum ${maxPhotos} photos reached`;
     } else {
         btn.disabled = false;
-        btn.textContent = '+ Add Photo';
+        btn.textContent = '📷 Add Photo';
     }
 }
-
-// Start with no photos by default (photos are optional)
-// Users can add photos using the "Add Photo" button
 
 // Add event listener to the Add Photo button
 document.getElementById('addPhotoBtn').addEventListener('click', addPhotoInput);
 
-// Form validation - no photo validation needed since photos are optional
+// Form validation
 document.getElementById('workItemForm').addEventListener('submit', function(e) {
     // Could add other validation here if needed
 });
 </script>
 {% endblock %}
-

@@ -139,30 +139,34 @@ def submit_form():
         print(f"Error querying assigned items: {e}")
         assigned_items = []
     
-    # Get dynamic approved items for draft dropdown
+    # Get all in-progress items (all statuses except Completed Review)
     try:
-        approved_items = WorkItem.query.filter_by(
+        in_progress_items = WorkItem.query.filter(
+            WorkItem.status != 'Completed Review'
+        ).order_by(WorkItem.submitted_at.desc()).all()
+    except Exception as e:
+        print(f"Error querying in progress items: {e}")
+        in_progress_items = []
+    
+    # Get all completed items
+    try:
+        completed_items = WorkItem.query.filter_by(
             status='Completed Review'
         ).order_by(WorkItem.item_number).all()
     except Exception as e:
-        print(f"Error querying approved items: {e}")
-        approved_items = []
-    
-    # Combine static and dynamic items
-    all_draft_items = current_app.config['DRAFT_ITEMS'].copy()
-    for item in approved_items:
-        item_entry = f"{item.item_number} - {item.description[:50]}"
-        if item_entry not in all_draft_items:
-            all_draft_items.append(item_entry)
+        print(f"Error querying completed items: {e}")
+        completed_items = []
     
     return render_template('crew_form.html', 
                          next_item_number=next_item_number,
                          crew_name=crew_name,
                          min_photos=current_app.config['PHOTO_MIN_COUNT'],
                          max_photos=current_app.config['PHOTO_MAX_COUNT'],
+                         assigned_items=assigned_items,
+                         in_progress_items=in_progress_items,
+                         completed_items=completed_items,
                          ev_yard_items=current_app.config['EV_YARD_ITEMS'],
-                         draft_items=all_draft_items,
-                         assigned_items=assigned_items)
+                         draft_items=current_app.config['DRAFT_ITEMS'])
 
 
 @bp.route('/edit/<int:item_id>', methods=['GET', 'POST'])
@@ -279,6 +283,24 @@ def delete_assigned_photo(item_id, photo_id):
         flash(f'Error deleting photo: {str(e)}', 'danger')
 
     return redirect(url_for('crew.edit_assigned_item', item_id=item_id))
+
+
+@bp.route('/view/<int:item_id>')
+@crew_required
+def view_item(item_id):
+    """View a work item (read-only)."""
+    work_item = WorkItem.query.get_or_404(item_id)
+    crew_name = session.get('crew_name')
+    
+    # Determine if this user can edit (for display purposes)
+    can_edit = (work_item.submitter_name == crew_name or 
+                work_item.assigned_to == crew_name) and \
+               work_item.status not in ['Completed Review']
+    
+    return render_template('crew_view.html',
+                         work_item=work_item,
+                         crew_name=crew_name,
+                         can_edit=can_edit)
 
 
 @bp.route('/success')

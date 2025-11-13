@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}View Work Item - {{ work_item.item_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- View-Only Card -->
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h3 class="mb-0">View Work Item</h3>
+                <small>Viewing as: <strong>{{ crew_name }}</strong> | Status: <span class="badge bg-dark">{{ work_item.status }}</span></small>
+            </div>
+            <div class="card-body">
+                
+                <!-- Item Number -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Item Number</label>
+                    <p class="form-control-plaintext">{{ work_item.item_number }}</p>
+                </div>
+
+                <!-- Location -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Location</label>
+                    <p class="form-control-plaintext">{{ work_item.location }}</p>
+                </div>
+
+                <!-- Submitter & Date -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Submitted By</label>
+                    <p class="form-control-plaintext">{{ work_item.submitter_name }} on {{ work_item.submitted_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+
+                {% if work_item.assigned_to %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Assigned To</label>
+                    <p class="form-control-plaintext">{{ work_item.assigned_to }}</p>
+                </div>
+                {% endif %}
+
+                <hr class="my-4">
+
+                <!-- Description -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Description (Brief Summary)</label>
+                    <p class="form-control-plaintext">{{ work_item.description }}</p>
+                </div>
+
+                <!-- Detail -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Detail (Complete Description)</label>
+                    <p class="form-control-plaintext" style="white-space: pre-wrap;">{{ work_item.detail }}</p>
+                </div>
+
+                <!-- References/OFM -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Operator Furnished Material (OFM)</label>
+                    <p class="form-control-plaintext" style="white-space: pre-wrap;">{{ work_item.references or 'None' }}</p>
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Photos Section -->
+                <h5 class="mb-3">Photos</h5>
+
+                {% if work_item.photos %}
+                <div class="row">
+                    {% for photo in work_item.photos %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <img src="{{ url_for('admin.serve_upload', filename=photo.filename) }}"
+                                 class="card-img-top" alt="Work item photo">
+                            {% if photo.caption %}
+                            <div class="card-body">
+                                <p class="card-text"><small class="text-muted">{{ photo.caption }}</small></p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted">No photos attached.</p>
+                {% endif %}
+
+                <hr class="my-4">
+
+                <!-- Revision Notes (if any) -->
+                {% if work_item.revision_notes %}
+                <div class="alert alert-warning">
+                    <h5 class="alert-heading">Revision Notes</h5>
+                    <p style="white-space: pre-wrap;">{{ work_item.revision_notes }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Admin Notes (if any - internal use) -->
+                {% if work_item.admin_notes %}
+                <div class="alert alert-secondary">
+                    <h5 class="alert-heading">Admin Notes</h5>
+                    <p style="white-space: pre-wrap;">{{ work_item.admin_notes }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                    {% if can_edit %}
+                    <a href="{{ url_for('crew.edit_assigned_item', item_id=work_item.id) }}" 
+                       class="btn btn-warning btn-lg">
+                        Edit This Item
+                    </a>
+                    {% endif %}
+                    <a href="{{ url_for('crew.submit_form') }}" class="btn btn-outline-secondary">
+                        Return to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
