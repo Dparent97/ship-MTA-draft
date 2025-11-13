@@ -359,3 +359,100 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* Login page animations and styling */
+.login-card {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.5s ease-out;
+}
+
+.login-card.fade-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.login-icon {
+    animation: bounce-in 0.8s ease-out;
+}
+
+@keyframes bounce-in {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Input group styling for login forms */
+.input-group-text {
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus + .input-group-text,
+.input-group:focus-within .input-group-text {
+    background-color: #e7f1ff;
+    border-color: #86b7fe;
+}
+
+.form-control:focus,
+.form-select:focus {
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    transition: all 0.3s ease;
+}
+
+/* Button hover effects */
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Password toggle button */
+#togglePassword {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#togglePassword:hover {
+    background-color: #f8f9fa;
+}
+
+/* Link hover effects */
+a {
+    transition: all 0.2s ease;
+}
+
+a:hover {
+    transform: translateX(2px);
+    opacity: 0.8;
+}
+
+/* Smooth input focus animation */
+.form-control,
+.form-select {
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+/* Card shadow enhancement */
+.shadow-lg {
+    transition: box-shadow 0.3s ease;
+}
+
+.login-card:hover {
+    box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2) !important;
+}
