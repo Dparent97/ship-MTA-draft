@@ -166,20 +166,16 @@
                             </div>
                             
                             <hr class="my-4">
-                            
-                            <!-- Photos Section -->
-                            <h5 class="mb-3">📸 Photos (Optional, Maximum {{ max_photos }})</h5>
+
+                            <!-- Enhanced Photos Section -->
+                            <h5 class="mb-3">📸 Photos</h5>
                             <p class="text-muted small mb-3">
-                                Tip: Use your device's camera to capture photos directly
+                                Drag and drop photos or click to upload (Maximum {{ max_photos }})
                             </p>
 
-                            <div id="photoContainer">
-                                <!-- Photo inputs will be added dynamically -->
+                            <div id="photoUploadContainer" data-max-photos="{{ max_photos }}" data-min-photos="{{ min_photos }}">
+                                <!-- Photo upload UI will be injected here by photo-upload.js -->
                             </div>
-
-                            <button type="button" class="btn btn-secondary mb-3 w-100" id="addPhotoBtn">
-                                📷 Add Photo
-                            </button>
 
                             <hr class="my-4">
 
@@ -294,6 +290,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/photo-upload.js') }}"></script>
 <script>
 // Reference dropdown selection - populate main item number input
 document.getElementById('ev_yard_select').addEventListener('change', function() {
@@ -310,73 +307,41 @@ document.getElementById('draft_select').addEventListener('change', function() {
     }
 });
 
-// Photo management
-let photoCount = 0;
-const minPhotos = {{ min_photos }};
-const maxPhotos = {{ max_photos }};
-
-function addPhotoInput() {
-    if (photoCount >= maxPhotos) {
-        alert(`Maximum ${maxPhotos} photos allowed`);
-        return;
-    }
-
-    photoCount++;
-    const photoDiv = document.createElement('div');
-    photoDiv.className = 'card mb-3 photo-input';
-    photoDiv.id = `photo-${photoCount}`;
-    photoDiv.innerHTML = `
-        <div class="card-body">
-            <div class="row">
-                <div class="col-12 mb-3">
-                    <label class="form-label">📷 Photo ${photoCount}</label>
-                    <input type="file" class="form-control" name="photos"
-                           accept="image/jpeg,image/jpg,image/png,image/heic,image/heif"
-                           capture="environment">
-                    <small class="form-text text-muted">Tap to use camera or choose from gallery</small>
-                </div>
-                <div class="col-12 mb-2">
-                    <label class="form-label">Caption (Optional)</label>
-                    <input type="text" class="form-control" name="photo_captions"
-                           placeholder="Describe what this photo shows">
-                </div>
-            </div>
-            <button type="button" class="btn btn-sm btn-danger w-100" onclick="removePhoto(${photoCount})">
-                🗑️ Remove Photo ${photoCount}
-            </button>
-        </div>
-    `;
-
-    document.getElementById('photoContainer').appendChild(photoDiv);
-    updateAddPhotoButton();
-}
-
-function removePhoto(num) {
-    const photoDiv = document.getElementById(`photo-${num}`);
-    if (photoDiv) {
-        photoDiv.remove();
-        photoCount--;
-        updateAddPhotoButton();
-    }
-}
-
-function updateAddPhotoButton() {
-    const btn = document.getElementById('addPhotoBtn');
-    if (photoCount >= maxPhotos) {
-        btn.disabled = true;
-        btn.textContent = `Maximum ${maxPhotos} photos reached`;
-    } else {
-        btn.disabled = false;
-        btn.textContent = '📷 Add Photo';
-    }
-}
-
-// Add event listener to the Add Photo button
-document.getElementById('addPhotoBtn').addEventListener('click', addPhotoInput);
-
-// Form validation
+// Form submission - append photos to form data
 document.getElementById('workItemForm').addEventListener('submit', function(e) {
-    // Could add other validation here if needed
+    e.preventDefault();
+
+    // Create FormData from the form
+    const formData = new FormData(this);
+
+    // Remove any existing photo data (old system compatibility)
+    formData.delete('photos');
+    formData.delete('photo_captions');
+
+    // Add photos from the new upload manager
+    if (window.photoUploadManager) {
+        window.photoUploadManager.appendToFormData(formData);
+    }
+
+    // Submit the form
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            // Redirect to success page or reload
+            window.location.href = response.url;
+        } else {
+            return response.text().then(text => {
+                throw new Error('Form submission failed: ' + text);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an error submitting the form. Please try again.');
+    });
 });
 </script>
 {% endblock %}
