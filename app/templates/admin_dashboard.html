@@ -5,15 +5,15 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Work Item Dashboard</h2>
-    <span class="badge bg-secondary">{{ work_items|length }} Total Items</span>
+    <span class="badge bg-secondary fs-6">{{ work_items|length }} Total Items</span>
 </div>
 
-<!-- Filters -->
-<div class="card mb-4">
+<!-- Enhanced Filters -->
+<div class="card mb-4 shadow-sm">
     <div class="card-body">
-        <form method="GET" class="row g-3">
+        <form method="GET" class="row g-3" id="filterForm">
             <div class="col-md-4">
-                <label class="form-label">Status Filter</label>
+                <label class="form-label"><i class="bi bi-funnel"></i> Status Filter</label>
                 <select class="form-select" name="status" onchange="this.form.submit()">
                     <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
                     <option value="Submitted" {% if status_filter == 'Submitted' %}selected{% endif %}>Submitted</option>
@@ -25,13 +25,18 @@
                 </select>
             </div>
             <div class="col-md-4">
-                <label class="form-label">Sort By</label>
+                <label class="form-label"><i class="bi bi-sort-down"></i> Sort By</label>
                 <select class="form-select" name="sort" onchange="this.form.submit()">
                     <option value="date_desc" {% if sort_by == 'date_desc' %}selected{% endif %}>Newest First</option>
                     <option value="date_asc" {% if sort_by == 'date_asc' %}selected{% endif %}>Oldest First</option>
                     <option value="item_number" {% if sort_by == 'item_number' %}selected{% endif %}>Item Number</option>
                     <option value="submitter" {% if sort_by == 'submitter' %}selected{% endif %}>Submitter</option>
                 </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><i class="bi bi-search"></i> Search</label>
+                <input type="text" class="form-control" name="search" id="searchInput"
+                       placeholder="Search items..." value="{{ search_query or '' }}">
             </div>
         </form>
     </div>
@@ -55,137 +60,93 @@
     </div>
 </div>
 
-<!-- Work Items Table - Desktop View -->
-<div class="table-responsive d-none d-md-block">
-    <table class="table table-hover">
-        <thead class="table-light">
-            <tr>
-                <th width="40">
-                    <input type="checkbox" id="selectAllTable" class="form-check-input">
-                </th>
-                <th>Item No.</th>
-                <th>Description</th>
-                <th>Location</th>
-                <th>Submitter</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in work_items %}
-            <tr>
-                <td>
-                    <input type="checkbox" class="form-check-input item-checkbox"
-                           value="{{ item.id }}" form="batchForm" name="item_ids[]">
-                </td>
-                <td><strong>{{ item.item_number }}</strong></td>
-                <td>{{ item.description[:50] }}{% if item.description|length > 50 %}...{% endif %}</td>
-                <td>{{ item.location }}</td>
-                <td>{{ item.submitter_name }}</td>
-                <td><small>{{ format_datetime(item.submitted_at) }}</small></td>
-                <td>
-                    <span class="badge
+<!-- Modern Card Grid Layout -->
+<div class="work-items-grid">
+    {% for item in work_items %}
+    <div class="work-item-card card shadow-sm h-100">
+        <!-- Card Header with Checkbox -->
+        <div class="card-header bg-white border-bottom-0 p-3">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h5 class="card-title mb-1 fw-bold text-primary">{{ item.item_number }}</h5>
+                    <span class="badge status-badge
                         {% if item.status == 'Submitted' %}bg-primary
                         {% elif item.status == 'In Review by DP' %}bg-warning text-dark
                         {% elif item.status == 'In Review by AL' %}bg-warning text-dark
                         {% elif item.status == 'Needs Revision' %}bg-danger
-                        {% elif item.status == 'Awaiting Photos' %}bg-info
+                        {% elif item.status == 'Awaiting Photos' %}bg-info text-dark
                         {% elif item.status == 'Completed Review' %}bg-success
                         {% else %}bg-secondary{% endif %}">
                         {{ item.status }}
                     </span>
-                </td>
-                <td>
-                    <div class="btn-group btn-group-sm">
-                        <a href="{{ url_for('admin.view_item', item_id=item.id) }}"
-                           class="btn btn-outline-primary" title="View Details">
-                            View
-                        </a>
-                        <a href="{{ url_for('admin.download_single', item_id=item.id) }}"
-                           class="btn btn-outline-success" title="Download .docx">
-                            Download
-                        </a>
-                        <button type="button" class="btn btn-outline-danger" 
-                                onclick="confirmDelete('{{ item.id }}', '{{ item.item_number }}')"
-                                title="Delete Item">
-                            Delete
-                        </button>
-                    </div>
-                </td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="8" class="text-center text-muted py-4">
-                    No work items found
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<!-- Work Items Cards - Mobile View -->
-<div class="d-md-none">
-    {% for item in work_items %}
-    <div class="mobile-table-card">
-        <div class="d-flex justify-content-between align-items-start mb-3">
-            <div>
-                <h6 class="mb-1"><strong>{{ item.item_number }}</strong></h6>
-                <span class="badge
-                    {% if item.status == 'Submitted' %}bg-primary
-                    {% elif item.status == 'In Review by DP' %}bg-warning text-dark
-                    {% elif item.status == 'In Review by AL' %}bg-warning text-dark
-                    {% elif item.status == 'Needs Revision' %}bg-danger
-                    {% elif item.status == 'Awaiting Photos' %}bg-info
-                    {% elif item.status == 'Completed Review' %}bg-success
-                    {% else %}bg-secondary{% endif %}">
-                    {{ item.status }}
-                </span>
+                </div>
+                <input type="checkbox" class="form-check-input item-checkbox ms-2"
+                       value="{{ item.id }}" form="batchForm" name="item_ids[]"
+                       style="width: 1.25rem; height: 1.25rem;">
             </div>
-            <input type="checkbox" class="form-check-input item-checkbox"
-                   value="{{ item.id }}" form="batchForm" name="item_ids[]"
-                   style="width: 1.5rem; height: 1.5rem;">
         </div>
 
-        <div class="mobile-card-row">
-            <span class="mobile-card-label">Description:</span>
-            <span class="mobile-card-value">{{ item.description[:40] }}{% if item.description|length > 40 %}...{% endif %}</span>
+        <!-- Photo Thumbnail -->
+        <div class="card-img-container position-relative">
+            {% if item.photos and item.photos|length > 0 %}
+                <img src="{{ url_for('admin.serve_upload', filename=item.photos[0].filename) }}"
+                     class="card-img-top work-item-thumbnail"
+                     alt="{{ item.item_number }}"
+                     loading="lazy">
+                {% if item.photos|length > 1 %}
+                    <span class="position-absolute top-0 end-0 m-2 badge bg-dark bg-opacity-75">
+                        <i class="bi bi-images"></i> {{ item.photos|length }}
+                    </span>
+                {% endif %}
+            {% else %}
+                <div class="card-img-top work-item-thumbnail-placeholder d-flex align-items-center justify-content-center bg-light">
+                    <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                </div>
+            {% endif %}
         </div>
 
-        <div class="mobile-card-row">
-            <span class="mobile-card-label">Location:</span>
-            <span class="mobile-card-value">{{ item.location[:30] }}{% if item.location|length > 30 %}...{% endif %}</span>
+        <!-- Card Body -->
+        <div class="card-body p-3">
+            <p class="card-text text-truncate-2 mb-2">
+                <strong>Description:</strong> {{ item.description }}
+            </p>
+            <div class="work-item-meta text-muted small">
+                <div class="mb-1">
+                    <i class="bi bi-geo-alt-fill"></i> {{ item.location[:40] }}{% if item.location|length > 40 %}...{% endif %}
+                </div>
+                <div class="mb-1">
+                    <i class="bi bi-person-fill"></i> {{ item.submitter_name }}
+                </div>
+                <div>
+                    <i class="bi bi-calendar-event"></i> {{ format_datetime(item.submitted_at) }}
+                </div>
+            </div>
         </div>
 
-        <div class="mobile-card-row">
-            <span class="mobile-card-label">Submitter:</span>
-            <span class="mobile-card-value">{{ item.submitter_name }}</span>
-        </div>
-
-        <div class="mobile-card-row">
-            <span class="mobile-card-label">Date:</span>
-            <span class="mobile-card-value"><small>{{ format_datetime(item.submitted_at) }}</small></span>
-        </div>
-
-        <div class="mobile-card-actions">
-            <a href="{{ url_for('admin.view_item', item_id=item.id) }}"
-               class="btn btn-primary">
-                👁️ View
-            </a>
-            <a href="{{ url_for('admin.download_single', item_id=item.id) }}"
-               class="btn btn-success">
-                📥 Download
-            </a>
-            <button type="button" class="btn btn-danger"
-                    onclick="confirmDelete('{{ item.id }}', '{{ item.item_number }}')">
-                🗑️ Delete
-            </button>
+        <!-- Card Footer with Actions -->
+        <div class="card-footer bg-white border-top p-3">
+            <div class="d-grid gap-2">
+                <a href="{{ url_for('admin.view_item', item_id=item.id) }}"
+                   class="btn btn-primary btn-sm">
+                    <i class="bi bi-eye-fill"></i> View Details
+                </a>
+                <div class="btn-group btn-group-sm">
+                    <a href="{{ url_for('admin.download_single', item_id=item.id) }}"
+                       class="btn btn-outline-success">
+                        <i class="bi bi-download"></i> Download
+                    </a>
+                    <button type="button" class="btn btn-outline-danger"
+                            onclick="confirmDelete('{{ item.id }}', '{{ item.item_number }}')">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
     {% else %}
-    <div class="text-center text-muted py-4">
-        No work items found
+    <div class="col-12 text-center text-muted py-5">
+        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+        <p class="mt-3">No work items found</p>
     </div>
     {% endfor %}
 </div>
@@ -195,7 +156,7 @@
 <script>
 // Batch selection logic
 const checkboxes = document.querySelectorAll('.item-checkbox');
-const selectAll = document.getElementById('selectAllTable');
+const selectAll = document.getElementById('selectAll');
 const selectedCount = document.getElementById('selectedCount');
 const downloadBtn = document.getElementById('downloadBatchBtn');
 
@@ -205,10 +166,12 @@ function updateSelectedCount() {
     downloadBtn.disabled = checked === 0;
 }
 
-selectAll.addEventListener('change', function() {
-    checkboxes.forEach(cb => cb.checked = this.checked);
-    updateSelectedCount();
-});
+if (selectAll) {
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        updateSelectedCount();
+    });
+}
 
 checkboxes.forEach(cb => {
     cb.addEventListener('change', updateSelectedCount);
@@ -216,9 +179,24 @@ checkboxes.forEach(cb => {
 
 updateSelectedCount();
 
+// Search functionality with debounce
+let searchTimeout;
+const searchInput = document.getElementById('searchInput');
+
+if (searchInput) {
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            document.getElementById('filterForm').submit();
+        }, 500); // 500ms debounce
+    });
+}
+
 // Delete confirmation
 function confirmDelete(itemId, itemNumber) {
     if (confirm(`Are you sure you want to delete work item "${itemNumber}"?\n\nThis will permanently delete:\n- The work item\n- All associated photos\n- All comments and history\n\nThis action cannot be undone!`)) {
+        showToast('Deleting work item...', 'info');
+
         // Create a form and submit it
         const form = document.createElement('form');
         form.method = 'POST';
@@ -227,6 +205,47 @@ function confirmDelete(itemId, itemNumber) {
         form.submit();
     }
 }
+
+// Toast notification system
+function showToast(message, type = 'info') {
+    // Remove any existing toasts
+    const existingToast = document.querySelector('.custom-toast');
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `custom-toast alert alert-${type} alert-dismissible fade show`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+
+    // Add to page
+    document.body.appendChild(toast);
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (toast && toast.parentNode) {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 150);
+        }
+    }, 5000);
+}
+
+// Show toast for flash messages (success/error operations)
+document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert:not(.custom-toast)');
+    alerts.forEach(alert => {
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
+    });
+});
 </script>
 {% endblock %}
 
