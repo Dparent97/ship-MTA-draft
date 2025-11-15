@@ -83,9 +83,13 @@ def delete_photo(item_id, photo_id):
 @bp.route('/dashboard')
 @admin_required
 def dashboard():
-    """Admin dashboard showing all work items."""
+    """Admin dashboard showing all work items with enhanced filtering."""
     # Get filter parameters
     status_filter = request.args.get('status', 'all')
+    assigned_to_filter = request.args.get('assigned_to', 'all')
+    ns_equipment_filter = request.args.get('ns_equipment', 'all')
+    from_date = request.args.get('from_date', '').strip()
+    to_date = request.args.get('to_date', '').strip()
     sort_by = request.args.get('sort', 'date_desc')
     search_query = request.args.get('search', '').strip()
 
@@ -95,6 +99,32 @@ def dashboard():
     # Apply status filter
     if status_filter != 'all':
         query = query.filter_by(status=status_filter)
+
+    # Apply assigned_to filter
+    if assigned_to_filter != 'all':
+        query = query.filter_by(assigned_to=assigned_to_filter)
+
+    # Apply ns_equipment filter
+    if ns_equipment_filter != 'all':
+        query = query.filter_by(ns_equipment=ns_equipment_filter)
+
+    # Apply date range filter
+    if from_date:
+        try:
+            from_date_obj = datetime.strptime(from_date, '%Y-%m-%d')
+            query = query.filter(WorkItem.submitted_at >= from_date_obj)
+        except ValueError:
+            pass  # Invalid date format, skip filter
+
+    if to_date:
+        try:
+            # Add one day to include the entire to_date day
+            to_date_obj = datetime.strptime(to_date, '%Y-%m-%d')
+            # Set time to end of day
+            to_date_obj = to_date_obj.replace(hour=23, minute=59, second=59)
+            query = query.filter(WorkItem.submitted_at <= to_date_obj)
+        except ValueError:
+            pass  # Invalid date format, skip filter
 
     # Apply search filter
     if search_query:
@@ -121,11 +151,30 @@ def dashboard():
 
     work_items = query.all()
 
+    # Get unique values for filter dropdowns
+    all_crew_members = current_app.config.get('CREW_MEMBERS', [])
+    assigned_crew = db.session.query(WorkItem.assigned_to).distinct().filter(
+        WorkItem.assigned_to.isnot(None)
+    ).all()
+    assigned_crew = sorted([crew[0] for crew in assigned_crew if crew[0]])
+
+    # Get unique ns_equipment values
+    ns_equipment_list = db.session.query(WorkItem.ns_equipment).distinct().filter(
+        WorkItem.ns_equipment.isnot(None)
+    ).all()
+    ns_equipment_list = sorted([eq[0] for eq in ns_equipment_list if eq[0]])
+
     return render_template('admin_dashboard.html',
                          work_items=work_items,
                          status_filter=status_filter,
+                         assigned_to_filter=assigned_to_filter,
+                         ns_equipment_filter=ns_equipment_filter,
+                         from_date=from_date,
+                         to_date=to_date,
                          sort_by=sort_by,
                          search_query=search_query,
+                         assigned_crew=assigned_crew,
+                         ns_equipment_list=ns_equipment_list,
                          format_datetime=format_datetime)
 
 

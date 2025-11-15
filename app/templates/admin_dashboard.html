@@ -8,13 +8,23 @@
     <span class="badge bg-secondary fs-6">{{ work_items|length }} Total Items</span>
 </div>
 
-<!-- Enhanced Filters -->
+<!-- Enhanced Quick Filters -->
 <div class="card mb-4 shadow-sm">
+    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-funnel-fill"></i> Quick Filters</h5>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary" id="activeFilterCount">0 active filters</span>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="clearFiltersBtn" onclick="clearAllFilters()">
+                <i class="bi bi-x-circle"></i> Clear All
+            </button>
+        </div>
+    </div>
     <div class="card-body">
         <form method="GET" class="row g-3" id="filterForm">
+            <!-- Row 1: Status, Assigned To, Department/System -->
             <div class="col-md-4">
-                <label class="form-label"><i class="bi bi-funnel"></i> Status Filter</label>
-                <select class="form-select" name="status" onchange="this.form.submit()">
+                <label class="form-label"><i class="bi bi-tag-fill"></i> Status</label>
+                <select class="form-select" name="status" id="statusFilter" onchange="this.form.submit()">
                     <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All Statuses</option>
                     <option value="Submitted" {% if status_filter == 'Submitted' %}selected{% endif %}>Submitted</option>
                     <option value="In Review by DP" {% if status_filter == 'In Review by DP' %}selected{% endif %}>In Review by DP</option>
@@ -25,6 +35,41 @@
                 </select>
             </div>
             <div class="col-md-4">
+                <label class="form-label"><i class="bi bi-person-fill"></i> Assigned To</label>
+                <select class="form-select" name="assigned_to" id="assignedToFilter" onchange="this.form.submit()">
+                    <option value="all" {% if assigned_to_filter == 'all' %}selected{% endif %}>All Crew Members</option>
+                    {% for crew in assigned_crew %}
+                    <option value="{{ crew }}" {% if assigned_to_filter == crew %}selected{% endif %}>{{ crew }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><i class="bi bi-gear-fill"></i> Department/System</label>
+                <select class="form-select" name="ns_equipment" id="nsEquipmentFilter" onchange="this.form.submit()">
+                    <option value="all" {% if ns_equipment_filter == 'all' %}selected{% endif %}>All Systems</option>
+                    {% for equipment in ns_equipment_list %}
+                    <option value="{{ equipment }}" {% if ns_equipment_filter == equipment %}selected{% endif %}>{{ equipment }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Row 2: Date Range and Search -->
+            <div class="col-md-3">
+                <label class="form-label"><i class="bi bi-calendar-range"></i> From Date</label>
+                <input type="date" class="form-control" name="from_date" id="fromDateFilter"
+                       value="{{ from_date or '' }}" onchange="this.form.submit()">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label"><i class="bi bi-calendar-range"></i> To Date</label>
+                <input type="date" class="form-control" name="to_date" id="toDateFilter"
+                       value="{{ to_date or '' }}" onchange="this.form.submit()">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label"><i class="bi bi-search"></i> Search</label>
+                <input type="text" class="form-control" name="search" id="searchInput"
+                       placeholder="Item #, description, location..." value="{{ search_query or '' }}">
+            </div>
+            <div class="col-md-2">
                 <label class="form-label"><i class="bi bi-sort-down"></i> Sort By</label>
                 <select class="form-select" name="sort" onchange="this.form.submit()">
                     <option value="date_desc" {% if sort_by == 'date_desc' %}selected{% endif %}>Newest First</option>
@@ -32,11 +77,6 @@
                     <option value="item_number" {% if sort_by == 'item_number' %}selected{% endif %}>Item Number</option>
                     <option value="submitter" {% if sort_by == 'submitter' %}selected{% endif %}>Submitter</option>
                 </select>
-            </div>
-            <div class="col-md-4">
-                <label class="form-label"><i class="bi bi-search"></i> Search</label>
-                <input type="text" class="form-control" name="search" id="searchInput"
-                       placeholder="Search items..." value="{{ search_query or '' }}">
             </div>
         </form>
     </div>
@@ -199,6 +239,44 @@ if (searchInput) {
         }, 500); // 500ms debounce
     });
 }
+
+// Clear all filters function
+function clearAllFilters() {
+    window.location.href = window.location.pathname;
+}
+
+// Update active filter count
+function updateFilterCount() {
+    let count = 0;
+    const urlParams = new URLSearchParams(window.location.search);
+
+    // Count active filters (excluding 'all' and 'date_desc' which is default)
+    if (urlParams.get('status') && urlParams.get('status') !== 'all') count++;
+    if (urlParams.get('assigned_to') && urlParams.get('assigned_to') !== 'all') count++;
+    if (urlParams.get('ns_equipment') && urlParams.get('ns_equipment') !== 'all') count++;
+    if (urlParams.get('from_date')) count++;
+    if (urlParams.get('to_date')) count++;
+    if (urlParams.get('search')) count++;
+    if (urlParams.get('sort') && urlParams.get('sort') !== 'date_desc') count++;
+
+    const badge = document.getElementById('activeFilterCount');
+    const clearBtn = document.getElementById('clearFiltersBtn');
+
+    if (badge) {
+        badge.textContent = count === 1 ? '1 active filter' : `${count} active filters`;
+        badge.className = count > 0 ? 'badge bg-success' : 'badge bg-secondary';
+    }
+
+    if (clearBtn) {
+        clearBtn.disabled = count === 0;
+        clearBtn.style.opacity = count === 0 ? '0.5' : '1';
+    }
+}
+
+// Update filter count on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateFilterCount();
+});
 
 // Delete confirmation
 function confirmDelete(itemId, itemNumber) {

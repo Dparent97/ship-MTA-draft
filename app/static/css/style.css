@@ -1400,3 +1400,86 @@ a:hover {
 .work-item-card .btn-group .btn {
     flex: 1;
 }
+
+/* ========================================
+   Quick Filters Enhancement
+   ======================================== */
+
+/* Filter card header styling */
+.card-header h5 {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Active filter badge animation */
+#activeFilterCount {
+    transition: all 0.3s ease;
+    font-weight: 600;
+    padding: 0.4rem 0.75rem;
+}
+
+#activeFilterCount.bg-success {
+    background-color: var(--color-success) !important;
+    animation: pulse 0.5s ease;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Clear filters button styling */
+#clearFiltersBtn {
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+#clearFiltersBtn:not(:disabled):hover {
+    background-color: var(--color-danger);
+    border-color: var(--color-danger);
+    color: white;
+    transform: translateX(-2px);
+}
+
+#clearFiltersBtn:disabled {
+    cursor: not-allowed;
+}
+
+/* Filter form controls enhancement */
+#filterForm .form-select,
+#filterForm .form-control {
+    transition: all 0.2s ease;
+}
+
+#filterForm .form-select:focus,
+#filterForm .form-control:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 112, 186, 0.15);
+}
+
+/* Filter label styling */
+#filterForm .form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+#filterForm .form-label i {
+    margin-right: 0.35rem;
+    color: var(--color-primary);
+}
+
+/* Date input styling */
+#filterForm input[type="date"] {
+    cursor: pointer;
+}
+
+/* Gap utility for filter header */
+.gap-2 {
+    gap: 0.5rem !important;
+}
