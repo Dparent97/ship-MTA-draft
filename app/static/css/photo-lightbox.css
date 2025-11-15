@@ -1,0 +1,517 @@
+/**
+ * Photo Lightbox Gallery Styles
+ * Mobile-first responsive design with swipe gestures
+ */
+
+/* ========================================
+   Lightbox Container
+   ======================================== */
+
+.photo-lightbox {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.photo-lightbox.active {
+    display: block;
+    opacity: 1;
+}
+
+/* Overlay Background */
+.lightbox-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    backdrop-filter: blur(10px);
+}
+
+/* Content Container */
+.lightbox-content {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+/* ========================================
+   Close Button
+   ======================================== */
+
+.lightbox-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: all 0.2s ease;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+}
+
+.lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.1);
+}
+
+.lightbox-close:active {
+    transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+    .lightbox-close {
+        width: 44px;
+        height: 44px;
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+
+    .lightbox-close svg {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+/* ========================================
+   Photo Counter
+   ======================================== */
+
+.lightbox-counter {
+    position: absolute;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 24px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    backdrop-filter: blur(10px);
+    z-index: 10;
+    display: none;
+}
+
+.lightbox-counter .counter-current {
+    font-weight: 700;
+    color: #ffc107;
+}
+
+@media (max-width: 768px) {
+    .lightbox-counter {
+        top: 0.5rem;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+    }
+}
+
+/* ========================================
+   Navigation Buttons
+   ======================================== */
+
+.lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: all 0.2s ease;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+}
+
+.lightbox-nav:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.lightbox-nav:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.lightbox-prev {
+    left: 1rem;
+}
+
+.lightbox-next {
+    right: 1rem;
+}
+
+@media (max-width: 768px) {
+    .lightbox-nav {
+        width: 48px;
+        height: 48px;
+        opacity: 0.8;
+    }
+
+    .lightbox-nav svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .lightbox-prev {
+        left: 0.5rem;
+    }
+
+    .lightbox-next {
+        right: 0.5rem;
+    }
+}
+
+/* Hide nav buttons on very small screens in landscape */
+@media (max-width: 768px) and (orientation: landscape) {
+    .lightbox-nav {
+        width: 40px;
+        height: 40px;
+    }
+
+    .lightbox-nav svg {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+/* ========================================
+   Image Container
+   ======================================== */
+
+.lightbox-image-container {
+    position: relative;
+    max-width: 90%;
+    max-height: 80%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: pan-y pinch-zoom;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.lightbox-image {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    transition: opacity 0.3s ease;
+    opacity: 0;
+}
+
+.lightbox-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.lightbox-loading .spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3em;
+}
+
+/* Slide Animations */
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.lightbox-image-container.slide-next .lightbox-image {
+    animation: slideInFromRight 0.3s ease;
+}
+
+.lightbox-image-container.slide-prev .lightbox-image {
+    animation: slideInFromLeft 0.3s ease;
+}
+
+@media (max-width: 768px) {
+    .lightbox-image-container {
+        max-width: 95%;
+        max-height: 70%;
+    }
+
+    .lightbox-image {
+        border-radius: 4px;
+    }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+    .lightbox-image-container {
+        max-height: 85%;
+    }
+}
+
+/* ========================================
+   Caption
+   ======================================== */
+
+.lightbox-caption {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 80%;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    text-align: center;
+    display: none;
+    z-index: 10;
+}
+
+.lightbox-caption p {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .lightbox-caption {
+        max-width: 90%;
+        padding: 0.75rem 1rem;
+        bottom: 0.5rem;
+    }
+
+    .lightbox-caption p {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+    .lightbox-caption {
+        max-width: 70%;
+        padding: 0.5rem 1rem;
+    }
+
+    .lightbox-caption p {
+        font-size: 0.85rem;
+    }
+}
+
+/* ========================================
+   Swipe Hint (Mobile)
+   ======================================== */
+
+.lightbox-swipe-hint {
+    position: absolute;
+    bottom: 5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 193, 7, 0.9);
+    color: #000;
+    padding: 0.5rem 1rem;
+    border-radius: 24px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: none;
+    z-index: 11;
+    backdrop-filter: blur(10px);
+    animation: pulse 2s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: translateX(-50%) scale(1.05);
+    }
+}
+
+@media (max-width: 768px) {
+    .lightbox-swipe-hint {
+        bottom: 4rem;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
+}
+
+/* ========================================
+   Photo Gallery Grid (for templates)
+   ======================================== */
+
+.photo-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Desktop: 3-4 columns */
+@media (min-width: 992px) {
+    .photo-gallery-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+    .photo-gallery-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Mobile: 2 columns */
+@media (max-width: 767px) {
+    .photo-gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+}
+
+.photo-gallery-item {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 8px;
+    background: #f0f0f0;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.photo-gallery-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.photo-gallery-item:active {
+    transform: scale(0.98);
+}
+
+.photo-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Photo count badge */
+.photo-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 24px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.75rem;
+}
+
+.photo-count-badge svg {
+    width: 16px;
+    height: 16px;
+    color: #6c757d;
+}
+
+@media (max-width: 768px) {
+    .photo-gallery-item {
+        border-radius: 6px;
+    }
+
+    .photo-count-badge {
+        font-size: 0.85rem;
+        padding: 0.4rem 0.6rem;
+    }
+}
+
+/* ========================================
+   Accessibility
+   ======================================== */
+
+/* Focus styles for keyboard navigation */
+.lightbox-close:focus,
+.lightbox-nav:focus {
+    outline: 3px solid #ffc107;
+    outline-offset: 2px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+    .photo-lightbox,
+    .lightbox-image,
+    .lightbox-nav,
+    .lightbox-close,
+    .photo-gallery-item {
+        transition: none;
+        animation: none;
+    }
+
+    .lightbox-swipe-hint {
+        animation: none;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .lightbox-close,
+    .lightbox-nav {
+        border-width: 3px;
+        border-color: white;
+    }
+
+    .lightbox-counter,
+    .lightbox-caption {
+        border: 2px solid white;
+    }
+}

@@ -179,6 +179,17 @@ class PhotoUploadManager {
                         <span class="visually-hidden">Loading...</span>
                     </div>
                     <p class="small text-muted mt-2 mb-0">Loading preview...</p>
+                    <div class="photo-upload-progress" style="width: 100%; max-width: 200px; margin-top: 1rem;">
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                 role="progressbar"
+                                 style="width: 0%"
+                                 aria-valuenow="0"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted d-block mt-1">Preparing...</small>
+                    </div>
                 </div>
                 <div class="photo-preview-content" style="display: none;">
                     <div class="photo-preview-image">
@@ -220,14 +231,55 @@ class PhotoUploadManager {
 
     loadImagePreview(photoData) {
         const reader = new FileReader();
+        const card = document.getElementById(photoData.id);
+        const progressBar = card.querySelector('.progress-bar');
+        const progressText = card.querySelector('.photo-upload-progress small');
+
+        // Simulate progressive loading with progress bar
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 30;
+            if (progress > 90) progress = 90;
+
+            if (progressBar) {
+                progressBar.style.width = `${progress}%`;
+                progressBar.setAttribute('aria-valuenow', progress);
+            }
+            if (progressText) {
+                progressText.textContent = `Loading... ${Math.round(progress)}%`;
+            }
+        }, 100);
+
+        reader.onprogress = (e) => {
+            if (e.lengthComputable) {
+                const percentLoaded = Math.round((e.loaded / e.total) * 100);
+                if (progressBar) {
+                    progressBar.style.width = `${percentLoaded}%`;
+                    progressBar.setAttribute('aria-valuenow', percentLoaded);
+                }
+                if (progressText) {
+                    progressText.textContent = `Loading... ${percentLoaded}%`;
+                }
+            }
+        };
 
         reader.onload = (e) => {
-            const card = document.getElementById(photoData.id);
+            clearInterval(progressInterval);
+
             const loadingDiv = card.querySelector('.photo-preview-loading');
             const contentDiv = card.querySelector('.photo-preview-content');
             const img = card.querySelector('.photo-preview-image img');
 
             img.src = e.target.result;
+
+            // Complete progress bar
+            if (progressBar) {
+                progressBar.style.width = '100%';
+                progressBar.setAttribute('aria-valuenow', 100);
+            }
+            if (progressText) {
+                progressText.textContent = 'Complete!';
+            }
 
             // Hide loading, show content
             setTimeout(() => {
@@ -238,6 +290,7 @@ class PhotoUploadManager {
         };
 
         reader.onerror = () => {
+            clearInterval(progressInterval);
             this.showError(`Failed to load preview for ${photoData.file.name}`);
             this.removePhoto(photoData.id);
         };
