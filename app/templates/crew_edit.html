@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import status_badge, status_badge_simple %}
 
 {% block title %}Edit Work Item - {{ work_item.item_number }}{% endblock %}
 
@@ -24,7 +25,7 @@
         <div class="card shadow">
             <div class="card-header bg-warning text-dark">
                 <h3 class="mb-0">Edit Assigned Work Item</h3>
-                <small>Editing as: <strong>{{ crew_name }}</strong> | Status: <span class="badge bg-dark">{{ work_item.status }}</span></small>
+                <small>Editing as: <strong>{{ crew_name }}</strong> | Status: {{ status_badge(work_item.status, work_item, true, 'sm') }}</small>
             </div>
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data" id="editWorkItemForm">

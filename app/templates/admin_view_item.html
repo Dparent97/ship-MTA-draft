@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import status_badge, status_badge_simple %}
 
 {% block title %}{{ work_item.item_number }} Details{% endblock %}
 
@@ -143,16 +144,9 @@
                 <!-- Current Status -->
                 <div class="mb-3">
                     <strong>Current Status:</strong><br>
-                    <span class="badge 
-                        {% if work_item.status == 'Submitted' %}bg-primary
-                        {% elif work_item.status == 'In Review by DP' %}bg-warning text-dark
-                        {% elif work_item.status == 'In Review by AL' %}bg-warning text-dark
-                        {% elif work_item.status == 'Needs Revision' %}bg-danger
-                        {% elif work_item.status == 'Awaiting Photos' %}bg-info
-                        {% elif work_item.status == 'Completed Review' %}bg-success
-                        {% else %}bg-secondary{% endif %} mt-2">
-                        {{ work_item.status }}
-                    </span>
+                    <div class="mt-2">
+                        {{ status_badge(work_item.status, work_item, true, 'md') }}
+                    </div>
                 </div>
                 
                 <!-- Assignment & Status Update Form -->

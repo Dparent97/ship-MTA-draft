@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_macros.html" import status_badge, status_badge_simple %}
 
 {% block title %}Crew Dashboard{% endblock %}
 
@@ -18,8 +19,8 @@
                         <h5>{{ item.item_number }}</h5>
                         <p class="mb-1"><strong>Location:</strong> {{ item.location }}</p>
                         <p class="mb-1"><strong>Assigned by:</strong> {{ item.last_modified_by or 'Admin' }}</p>
-                        <p class="mb-1"><strong>Status:</strong> 
-                            <span class="badge bg-warning text-dark">{{ item.status }}</span>
+                        <p class="mb-1"><strong>Status:</strong>
+                            {{ status_badge(item.status, item, true, 'sm') }}
                         </p>
                         {% if item.revision_notes %}
                         <div class="alert alert-info mb-2 mt-2">
@@ -212,7 +213,7 @@
                                         <td><strong>{{ item.item_number }}</strong></td>
                                         <td>{{ item.location|truncate(30) }}</td>
                                         <td>{{ item.description|truncate(40) }}</td>
-                                        <td><span class="badge bg-info">{{ item.status }}</span></td>
+                                        <td>{{ status_badge(item.status, item, true, 'sm') }}</td>
                                         <td>{{ item.submitter_name }}</td>
                                         <td>{{ item.photos|length }}</td>
                                         <td>

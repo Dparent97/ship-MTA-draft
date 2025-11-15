@@ -1,0 +1,100 @@
+{#
+  Status Badge Macro
+
+  Renders a color-coded status badge with icon and optional tooltip
+
+  Parameters:
+    - status: The current status string (required)
+    - work_item: The work item object (optional, for timestamp tooltip)
+    - show_tooltip: Whether to show hover tooltip with timestamp (default: true)
+    - size: Badge size - 'sm', 'md', or 'lg' (default: 'md')
+#}
+{% macro status_badge(status, work_item=None, show_tooltip=true, size='md') %}
+  {# Define status configurations: color class, icon, and display text #}
+  {% set status_config = {
+    'Submitted': {
+      'color': 'badge-primary',
+      'icon': 'bi-send-fill',
+      'bg_class': 'bg-primary'
+    },
+    'In Review by DP': {
+      'color': 'badge-warning',
+      'icon': 'bi-clock-fill',
+      'bg_class': 'bg-warning text-dark'
+    },
+    'In Review by AL': {
+      'color': 'badge-warning',
+      'icon': 'bi-clock-fill',
+      'bg_class': 'bg-warning text-dark'
+    },
+    'Needs Revision': {
+      'color': 'badge-danger',
+      'icon': 'bi-exclamation-triangle-fill',
+      'bg_class': 'bg-danger'
+    },
+    'Awaiting Photos': {
+      'color': 'badge-info',
+      'icon': 'bi-camera-fill',
+      'bg_class': 'bg-info text-dark'
+    },
+    'Completed Review': {
+      'color': 'badge-success',
+      'icon': 'bi-check-circle-fill',
+      'bg_class': 'bg-success'
+    }
+  } %}
+
+  {# Get configuration for current status, fallback to secondary #}
+  {% set config = status_config.get(status, {
+    'color': 'badge-secondary',
+    'icon': 'bi-circle-fill',
+    'bg_class': 'bg-secondary'
+  }) %}
+
+  {# Build tooltip content if work_item is provided #}
+  {% set tooltip_content = '' %}
+  {% if show_tooltip and work_item %}
+    {# Get the most recent status change for this status #}
+    {% set latest_history = None %}
+    {% if work_item.history %}
+      {% for history in work_item.history|reverse %}
+        {% if history.new_status == status %}
+          {% set latest_history = history %}
+          {% break %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    {% if latest_history %}
+      {% set tooltip_content = 'Changed to ' ~ status ~ ' on ' ~ latest_history.changed_at.strftime('%b %d, %Y at %I:%M %p') ~ ' by ' ~ latest_history.changed_by %}
+    {% elif work_item.submitted_at and status == 'Submitted' %}
+      {% set tooltip_content = 'Submitted on ' ~ work_item.submitted_at.strftime('%b %d, %Y at %I:%M %p') %}
+    {% endif %}
+  {% endif %}
+
+  {# Render the badge #}
+  <span class="status-badge status-badge-{{ size }} {{ config.bg_class }}"
+        {% if tooltip_content %}
+        data-bs-toggle="tooltip"
+        data-bs-placement="top"
+        title="{{ tooltip_content }}"
+        {% endif %}>
+    <i class="bi {{ config.icon }} status-icon"></i>
+    <span class="status-text">{{ status }}</span>
+  </span>
+{% endmacro %}
+
+
+{#
+  Status Badge (Simple Version)
+
+  Renders a status badge without requiring work_item object
+  Useful for list views where you don't need tooltips
+
+  Parameters:
+    - status: The current status string (required)
+    - size: Badge size - 'sm', 'md', or 'lg' (default: 'sm')
+#}
+{% macro status_badge_simple(status, size='sm') %}
+  {{ status_badge(status, None, false, size) }}
+{% endmacro %}
