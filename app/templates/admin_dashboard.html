@@ -5,7 +5,7 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Work Item Dashboard</h2>
-    <span class="badge bg-secondary fs-6">{{ work_items|length }} Total Items</span>
+    <span class="badge bg-secondary fs-6">{{ pagination.total if pagination else work_items|length }} Total Items</span>
 </div>
 
 <!-- Enhanced Filters -->
@@ -158,6 +158,48 @@
     </div>
     {% endfor %}
 </div>
+
+<!-- Pagination Controls -->
+{% if pagination and pagination.pages > 1 %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <!-- Previous Button -->
+        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('admin.dashboard', page=pagination.prev_num, status=status_filter, sort=sort_by, search=search_query) if pagination.has_prev else '#' }}">
+                Previous
+            </a>
+        </li>
+
+        <!-- Page Numbers -->
+        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}
+                <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('admin.dashboard', page=page_num, status=status_filter, sort=sort_by, search=search_query) }}">
+                        {{ page_num }}
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        <!-- Next Button -->
+        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('admin.dashboard', page=pagination.next_num, status=status_filter, sort=sort_by, search=search_query) if pagination.has_next else '#' }}">
+                Next
+            </a>
+        </li>
+    </ul>
+
+    <!-- Page Info -->
+    <div class="text-center text-muted mt-2">
+        Showing {{ (pagination.page - 1) * pagination.per_page + 1 }} to {{ min(pagination.page * pagination.per_page, pagination.total) }} of {{ pagination.total }} items
+    </div>
+</nav>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}

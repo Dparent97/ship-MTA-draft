@@ -4,6 +4,12 @@ from datetime import datetime
 
 class WorkItem(db.Model):
     __tablename__ = 'work_items'
+    __table_args__ = (
+        db.Index('idx_work_items_status', 'status'),
+        db.Index('idx_work_items_assigned_to', 'assigned_to'),
+        db.Index('idx_work_items_submitted_at', 'submitted_at'),
+        db.Index('idx_work_items_status_submitted_at', 'status', 'submitted_at'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     item_number = db.Column(db.String(50), unique=True, nullable=False)
@@ -51,7 +57,11 @@ class Photo(db.Model):
 
 class Comment(db.Model):
     __tablename__ = 'comments'
-    
+    __table_args__ = (
+        db.Index('idx_comments_work_item_id', 'work_item_id'),
+        db.Index('idx_comments_created_at', 'created_at'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     work_item_id = db.Column(db.Integer, db.ForeignKey('work_items.id'), nullable=False)
     author_name = db.Column(db.String(100), nullable=False)
@@ -65,7 +75,11 @@ class Comment(db.Model):
 
 class StatusHistory(db.Model):
     __tablename__ = 'status_history'
-    
+    __table_args__ = (
+        db.Index('idx_status_history_work_item_id', 'work_item_id'),
+        db.Index('idx_status_history_changed_at', 'changed_at'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     work_item_id = db.Column(db.Integer, db.ForeignKey('work_items.id'), nullable=False)
     old_status = db.Column(db.String(20))

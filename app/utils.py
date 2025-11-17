@@ -58,24 +58,44 @@ def resize_image(image_path: str, max_width: int = 576) -> tuple[int, int]:
 
 
 def get_next_draft_number() -> str:
-    """Return the next available DRAFT number starting at DRAFT_0020."""
+    """Return the next available DRAFT number starting at DRAFT_0020.
+
+    Note: This function is cached for 60 seconds to reduce database load.
+    Cache is cleared when new work items are submitted.
+    """
     from app.models import WorkItem
-    
+    from app import db, cache
+    from sqlalchemy import func
+
+    # Try to get from cache first
+    cached_value = cache.get('next_draft_number')
+    if cached_value:
+        return cached_value
+
     try:
-        existing_items = WorkItem.query.filter(WorkItem.item_number.like('DRAFT_%')).all()
+        # Use SQL to find the maximum draft number directly in the database
+        # This is much more efficient than fetching all items
+        result = db.session.query(
+            func.max(WorkItem.item_number)
+        ).filter(
+            WorkItem.item_number.like('DRAFT_%')
+        ).scalar()
 
-        if not existing_items:
-            return 'DRAFT_0020'
-
-        numbers = []
-        for item in existing_items:
+        if not result:
+            next_draft = 'DRAFT_0020'
+        else:
             try:
-                numbers.append(int(item.item_number.replace('DRAFT_', '')))
+                # Extract the number from the max draft number
+                current_max = int(result.replace('DRAFT_', ''))
+                next_num = current_max + 1
+                next_draft = f'DRAFT_{next_num:04d}'
             except ValueError:
-                continue
+                # If parsing fails, start from default
+                next_draft = 'DRAFT_0020'
 
-        next_num = max(numbers) + 1 if numbers else 20
-        return f'DRAFT_{next_num:04d}'
+        # Cache the result for 60 seconds
+        cache.set('next_draft_number', next_draft, timeout=60)
+        return next_draft
     except Exception as e:
         # If there's any error (like empty database), return default
         print(f"Error in get_next_draft_number: {e}")

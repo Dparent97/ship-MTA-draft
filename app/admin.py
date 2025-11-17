@@ -5,6 +5,7 @@ from app.docx_generator import generate_docx, generate_multiple_docx
 from app.utils import format_datetime, allowed_file, generate_unique_filename, resize_image
 from app.notifications import send_assignment_notification
 from datetime import datetime
+from sqlalchemy.orm import joinedload
 import os
 import zipfile
 from io import BytesIO
@@ -88,9 +89,15 @@ def dashboard():
     status_filter = request.args.get('status', 'all')
     sort_by = request.args.get('sort', 'date_desc')
     search_query = request.args.get('search', '').strip()
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
 
-    # Base query
-    query = WorkItem.query
+    # Base query with eager loading to prevent N+1 queries
+    query = WorkItem.query.options(
+        joinedload(WorkItem.photos),
+        joinedload(WorkItem.comments),
+        joinedload(WorkItem.history)
+    )
 
     # Apply status filter
     if status_filter != 'all':
@@ -119,10 +126,17 @@ def dashboard():
     elif sort_by == 'submitter':
         query = query.order_by(WorkItem.submitter_name)
 
-    work_items = query.all()
+    # Paginate results
+    pagination = query.paginate(
+        page=page,
+        per_page=per_page,
+        error_out=False
+    )
+    work_items = pagination.items
 
     return render_template('admin_dashboard.html',
                          work_items=work_items,
+                         pagination=pagination,
                          status_filter=status_filter,
                          sort_by=sort_by,
                          search_query=search_query,
@@ -133,8 +147,12 @@ def dashboard():
 @admin_required
 def view_item(item_id):
     """View full details of a work item."""
-    work_item = WorkItem.query.get_or_404(item_id)
-    return render_template('admin_view_item.html', 
+    work_item = WorkItem.query.options(
+        joinedload(WorkItem.photos),
+        joinedload(WorkItem.comments),
+        joinedload(WorkItem.history)
+    ).get_or_404(item_id)
+    return render_template('admin_view_item.html',
                          work_item=work_item,
                          format_datetime=format_datetime)
 

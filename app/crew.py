@@ -3,6 +3,7 @@ from app import db
 from app.models import WorkItem, Photo, Comment
 from app.utils import allowed_file, generate_unique_filename, resize_image, get_next_draft_number
 from datetime import datetime
+from sqlalchemy.orm import joinedload
 import os
 
 
@@ -115,12 +116,17 @@ def submit_form():
                     raise ValueError(f'Invalid file type for photo {idx + 1}')
 
             db.session.commit()
-            
+
+            # Clear the draft number cache when a new item is submitted
+            if item_number.startswith('DRAFT_'):
+                from app import cache
+                cache.delete('next_draft_number')
+
             if is_update:
                 flash(f'Work item {item_number} updated successfully!', 'success')
             else:
                 flash(f'Work item {item_number} submitted successfully!', 'success')
-            
+
             return redirect(url_for('crew.success', item_number=item_number))
 
         except Exception as e:
@@ -131,42 +137,75 @@ def submit_form():
     # GET request - show form
     next_item_number = get_next_draft_number()
     crew_name = session.get('crew_name')
-    
-    # Get items assigned to this crew member
+
+    # Get pagination parameters
+    assigned_page = request.args.get('assigned_page', 1, type=int)
+    progress_page = request.args.get('progress_page', 1, type=int)
+    completed_page = request.args.get('completed_page', 1, type=int)
+    per_page = 10  # Items per page for each section
+
+    # Get items assigned to this crew member with eager loading
     try:
-        assigned_items = WorkItem.query.filter_by(
+        assigned_pagination = WorkItem.query.options(
+            joinedload(WorkItem.photos)
+        ).filter_by(
             assigned_to=crew_name
-        ).filter(WorkItem.status.in_(['Needs Revision', 'Awaiting Photos'])).all()
+        ).filter(WorkItem.status.in_(['Needs Revision', 'Awaiting Photos'])).paginate(
+            page=assigned_page,
+            per_page=per_page,
+            error_out=False
+        )
+        assigned_items = assigned_pagination.items
     except Exception as e:
         print(f"Error querying assigned items: {e}")
         assigned_items = []
-    
-    # Get all in-progress items (all statuses except Completed Review)
+        assigned_pagination = None
+
+    # Get all in-progress items (all statuses except Completed Review) with eager loading
     try:
-        in_progress_items = WorkItem.query.filter(
+        progress_pagination = WorkItem.query.options(
+            joinedload(WorkItem.photos)
+        ).filter(
             WorkItem.status != 'Completed Review'
-        ).order_by(WorkItem.submitted_at.desc()).all()
+        ).order_by(WorkItem.submitted_at.desc()).paginate(
+            page=progress_page,
+            per_page=per_page,
+            error_out=False
+        )
+        in_progress_items = progress_pagination.items
     except Exception as e:
         print(f"Error querying in progress items: {e}")
         in_progress_items = []
-    
-    # Get all completed items
+        progress_pagination = None
+
+    # Get all completed items with eager loading
     try:
-        completed_items = WorkItem.query.filter_by(
+        completed_pagination = WorkItem.query.options(
+            joinedload(WorkItem.photos)
+        ).filter_by(
             status='Completed Review'
-        ).order_by(WorkItem.item_number).all()
+        ).order_by(WorkItem.item_number).paginate(
+            page=completed_page,
+            per_page=per_page,
+            error_out=False
+        )
+        completed_items = completed_pagination.items
     except Exception as e:
         print(f"Error querying completed items: {e}")
         completed_items = []
-    
-    return render_template('crew_form.html', 
+        completed_pagination = None
+
+    return render_template('crew_form.html',
                          next_item_number=next_item_number,
                          crew_name=crew_name,
                          min_photos=current_app.config['PHOTO_MIN_COUNT'],
                          max_photos=current_app.config['PHOTO_MAX_COUNT'],
                          assigned_items=assigned_items,
+                         assigned_pagination=assigned_pagination,
                          in_progress_items=in_progress_items,
+                         progress_pagination=progress_pagination,
                          completed_items=completed_items,
+                         completed_pagination=completed_pagination,
                          ev_yard_items=current_app.config['EV_YARD_ITEMS'],
                          draft_items=current_app.config['DRAFT_ITEMS'])
 
@@ -176,7 +215,9 @@ def submit_form():
 def edit_assigned_item(item_id):
     """Edit an assigned work item (crew member must be assigned to it)."""
     crew_name = session.get('crew_name')
-    work_item = WorkItem.query.get_or_404(item_id)
+    work_item = WorkItem.query.options(
+        joinedload(WorkItem.photos)
+    ).get_or_404(item_id)
 
     # Permission check: Verify this item is assigned to the current crew member
     if work_item.assigned_to != crew_name:
@@ -291,7 +332,10 @@ def delete_assigned_photo(item_id, photo_id):
 @crew_required
 def view_item(item_id):
     """View a work item (read-only)."""
-    work_item = WorkItem.query.get_or_404(item_id)
+    work_item = WorkItem.query.options(
+        joinedload(WorkItem.photos),
+        joinedload(WorkItem.comments)
+    ).get_or_404(item_id)
     crew_name = session.get('crew_name')
     
     # Determine if this user can edit (must match edit_assigned_item permissions)
