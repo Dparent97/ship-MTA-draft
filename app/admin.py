@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from app import db
 from app.models import WorkItem, StatusHistory, Comment
 from app.docx_generator import generate_docx, generate_multiple_docx
-from app.utils import format_datetime, allowed_file, generate_unique_filename, resize_image
+from app.utils import format_datetime, allowed_file, generate_unique_filename, resize_image, validate_image_file, log_file_upload
 from app.notifications import send_assignment_notification
 from datetime import datetime
 import os
@@ -166,15 +166,24 @@ def edit_item(item_id):
         # Handle new photo uploads
         new_photo_files = request.files.getlist('new_photos[]')
         new_photo_captions = request.form.getlist('new_photo_captions[]')
-        
+
         for photo_file, caption in zip(new_photo_files, new_photo_captions):
             if photo_file and photo_file.filename and allowed_file(photo_file.filename):
+                # Validate MIME type
+                if not validate_image_file(photo_file.stream):
+                    raise ValueError('Uploaded file failed MIME validation - file may not be a valid image')
+
                 filename = generate_unique_filename(photo_file.filename)
                 filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                 photo_file.save(filepath)
+                file_size = os.path.getsize(filepath)
                 _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
                 final_filename = os.path.basename(final_path)
-                
+
+                # Log upload for security audit
+                admin_name = session.get('crew_name', 'Admin')
+                log_file_upload(final_filename, admin_name, file_size, work_item.id)
+
                 from app.models import Photo
                 new_photo = Photo(
                     filename=final_filename,

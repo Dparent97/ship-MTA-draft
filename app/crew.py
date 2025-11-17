@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
 from app import db
 from app.models import WorkItem, Photo, Comment
-from app.utils import allowed_file, generate_unique_filename, resize_image, get_next_draft_number
+from app.utils import allowed_file, generate_unique_filename, resize_image, get_next_draft_number, validate_image_file, log_file_upload
 from datetime import datetime
 import os
 
@@ -93,16 +93,24 @@ def submit_form():
             # Process photos with their correct captions
             for idx, (photo_file, caption) in enumerate(valid_photo_pairs):
                 if photo_file and allowed_file(photo_file.filename):
+                    # Validate MIME type to ensure it's actually an image
+                    if not validate_image_file(photo_file.stream):
+                        raise ValueError(f'Photo {idx + 1} failed MIME validation - file may not be a valid image')
+
                     # Generate unique filename
                     filename = generate_unique_filename(photo_file.filename)
                     filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
 
                     # Save file
                     photo_file.save(filepath)
+                    file_size = os.path.getsize(filepath)
 
                     # Resize image (returns new path if HEIC was converted)
                     _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
                     final_filename = os.path.basename(final_path)
+
+                    # Log upload for security audit
+                    log_file_upload(final_filename, submitter_name, file_size, work_item.id)
 
                     # Create photo record with the correct caption
                     photo = Photo(
@@ -222,11 +230,19 @@ def edit_assigned_item(item_id):
 
             for photo_file, caption in zip(new_photo_files, new_photo_captions):
                 if photo_file and photo_file.filename and allowed_file(photo_file.filename):
+                    # Validate MIME type
+                    if not validate_image_file(photo_file.stream):
+                        raise ValueError('Uploaded file failed MIME validation - file may not be a valid image')
+
                     filename = generate_unique_filename(photo_file.filename)
                     filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
                     photo_file.save(filepath)
+                    file_size = os.path.getsize(filepath)
                     _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
                     final_filename = os.path.basename(final_path)
+
+                    # Log upload for security audit
+                    log_file_upload(final_filename, crew_name, file_size, work_item.id)
 
                     new_photo = Photo(
                         filename=final_filename,

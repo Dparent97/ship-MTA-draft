@@ -3,6 +3,11 @@ import os
 from werkzeug.utils import secure_filename
 from flask import current_app
 import uuid
+import imghdr
+import logging
+
+# Configure logging for file uploads
+logger = logging.getLogger(__name__)
 
 
 def allowed_file(filename: str) -> bool:
@@ -10,11 +15,78 @@ def allowed_file(filename: str) -> bool:
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
 
 
+def validate_image_file(file_stream) -> bool:
+    """
+    Validate that the file is actually an image by checking its MIME type.
+    This prevents malicious files from being uploaded with image extensions.
+
+    Args:
+        file_stream: File-like object to validate
+
+    Returns:
+        bool: True if file is a valid image, False otherwise
+    """
+    try:
+        # Save current position
+        pos = file_stream.tell()
+
+        # Read header to detect image type
+        header = file_stream.read(512)
+        file_stream.seek(pos)  # Reset position
+
+        # Check if it's a valid image format using imghdr
+        image_type = imghdr.what(None, header)
+
+        # Also try to open with PIL as a secondary check
+        if image_type:
+            try:
+                Image.open(file_stream).verify()
+                file_stream.seek(pos)  # Reset position after verify
+                return True
+            except Exception as e:
+                logger.warning(f"PIL verification failed: {e}")
+                file_stream.seek(pos)
+                return False
+
+        # For HEIC/HEIF files (not detected by imghdr)
+        if header[:4] == b'ftyp' or header[4:8] == b'ftyp':
+            # Basic HEIC/HEIF signature check
+            try:
+                file_stream.seek(pos)
+                Image.open(file_stream).verify()
+                file_stream.seek(pos)
+                return True
+            except Exception:
+                file_stream.seek(pos)
+                return False
+
+        return False
+    except Exception as e:
+        logger.error(f"Error validating image file: {e}")
+        return False
+
+
 def generate_unique_filename(original_filename: str) -> str:
     """Generate a unique filename while preserving the original extension."""
     ext = original_filename.rsplit('.', 1)[1].lower()
     unique_name = f"{uuid.uuid4().hex}.{ext}"
     return unique_name
+
+
+def log_file_upload(filename: str, user: str, file_size: int, work_item_id: int = None) -> None:
+    """
+    Log file upload for security auditing.
+
+    Args:
+        filename: Name of the uploaded file
+        user: Username of the uploader
+        file_size: Size of the file in bytes
+        work_item_id: Associated work item ID (if applicable)
+    """
+    logger.info(
+        f"File upload: filename={filename}, user={user}, size={file_size} bytes, "
+        f"work_item_id={work_item_id or 'N/A'}"
+    )
 
 
 def resize_image(image_path: str, max_width: int = 576) -> tuple[int, int]:

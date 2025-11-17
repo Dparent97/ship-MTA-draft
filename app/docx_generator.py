@@ -4,6 +4,44 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from app.models import WorkItem
 from flask import current_app
 import os
+import re
+import unicodedata
+import uuid
+
+
+def sanitize_filename(text: str, max_length: int = 50) -> str:
+    """
+    Sanitize text for use in filenames.
+
+    Args:
+        text: The text to sanitize
+        max_length: Maximum length for the sanitized text
+
+    Returns:
+        A safe filename string
+    """
+    # Normalize unicode characters
+    text = unicodedata.normalize('NFKD', text)
+    text = text.encode('ascii', 'ignore').decode('ascii')
+
+    # Remove or replace unsafe characters
+    # Keep alphanumeric, spaces, hyphens, and underscores
+    text = re.sub(r'[^a-zA-Z0-9\s\-_]', '', text)
+
+    # Replace spaces with underscores
+    text = re.sub(r'\s+', '_', text)
+
+    # Remove consecutive underscores/hyphens
+    text = re.sub(r'[_\-]+', '_', text)
+
+    # Trim to max length
+    text = text[:max_length].strip('_-')
+
+    # Ensure it's not empty
+    if not text:
+        text = 'document'
+
+    return text
 
 
 def generate_docx(work_item_id):
@@ -109,14 +147,21 @@ def generate_docx(work_item_id):
     footer_run.font.size = Pt(9)
     footer_run.font.color.rgb = RGBColor(128, 128, 128)
 
-    # Save document
-    filename = f"{work_item.item_number}_{work_item.description[:30].replace(' ', '_')}.docx"
+    # Save document with sanitized filename
+    # Sanitize both item number and description
+    safe_item_number = sanitize_filename(work_item.item_number, max_length=30)
+    safe_description = sanitize_filename(work_item.description, max_length=40)
+
+    # Add unique suffix to prevent collisions
+    unique_suffix = uuid.uuid4().hex[:8]
+    filename = f"{safe_item_number}_{safe_description}_{unique_suffix}.docx"
+
     # Use absolute path from Flask app root
     docs_folder = os.path.join(os.path.dirname(current_app.root_path), current_app.config['GENERATED_DOCS_FOLDER'])
     os.makedirs(docs_folder, exist_ok=True)
     filepath = os.path.join(docs_folder, filename)
     doc.save(filepath)
-    
+
     return filepath
 
 
