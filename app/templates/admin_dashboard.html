@@ -92,7 +92,7 @@
                 <div class="photo-tiles-grid">
                     {% for photo in item.photos[:4] %}
                         <div class="photo-tile">
-                            <img src="{{ url_for('serve_upload', filename=photo.filename) }}"
+                            <img src="{{ photo.get_url() }}"
                                  alt="Photo {{ loop.index }}"
                                  loading="lazy">
                         </div>

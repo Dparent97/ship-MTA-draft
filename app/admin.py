@@ -3,6 +3,7 @@ from app import db
 from app.models import WorkItem, StatusHistory, Comment
 from app.docx_generator import generate_docx, generate_multiple_docx
 from app.utils import format_datetime, allowed_file, generate_unique_filename, resize_image
+from app.cloudinary_utils import upload_image_to_cloudinary, delete_image_from_cloudinary, is_cloudinary_enabled
 from app.notifications import send_assignment_notification
 from datetime import datetime
 import os
@@ -36,19 +37,43 @@ def serve_upload(filename):
 def download_photo(item_id, photo_id):
     """Download a single photo."""
     from app.models import Photo
+    import requests
+    import tempfile
+
     photo = Photo.query.get_or_404(photo_id)
-    
+
     # Verify photo belongs to the work item
     if photo.work_item_id != item_id:
         flash('Invalid photo', 'danger')
         return redirect(url_for('admin.view_item', item_id=item_id))
-    
-    return send_from_directory(
-        current_app.config['UPLOAD_FOLDER'], 
-        photo.filename,
-        as_attachment=True,
-        download_name=f"photo_{photo_id}_{photo.filename}"
-    )
+
+    if photo.cloudinary_url:
+        # Download from Cloudinary and serve
+        try:
+            response = requests.get(photo.cloudinary_url, timeout=10)
+            response.raise_for_status()
+
+            # Create a temporary file
+            temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.jpg')
+            temp_file.write(response.content)
+            temp_file.close()
+
+            return send_file(
+                temp_file.name,
+                as_attachment=True,
+                download_name=f"photo_{photo_id}_{photo.filename}"
+            )
+        except Exception as e:
+            flash(f'Error downloading photo: {str(e)}', 'danger')
+            return redirect(url_for('admin.view_item', item_id=item_id))
+    else:
+        # Serve from local storage
+        return send_from_directory(
+            current_app.config['UPLOAD_FOLDER'],
+            photo.filename,
+            as_attachment=True,
+            download_name=f"photo_{photo_id}_{photo.filename}"
+        )
 
 
 @bp.route('/delete-photo/<int:item_id>/<int:photo_id>')
@@ -64,11 +89,15 @@ def delete_photo(item_id, photo_id):
         return redirect(url_for('admin.view_item', item_id=item_id))
     
     try:
-        # Delete file from disk
-        photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename)
-        if os.path.exists(photo_path):
-            os.remove(photo_path)
-        
+        # Delete file from Cloudinary or local storage
+        if photo.cloudinary_public_id:
+            delete_image_from_cloudinary(photo.cloudinary_public_id)
+        else:
+            # Local storage fallback
+            photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename)
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
+
         # Delete from database
         db.session.delete(photo)
         db.session.commit()
@@ -166,22 +195,34 @@ def edit_item(item_id):
         # Handle new photo uploads
         new_photo_files = request.files.getlist('new_photos[]')
         new_photo_captions = request.form.getlist('new_photo_captions[]')
-        
+
         for photo_file, caption in zip(new_photo_files, new_photo_captions):
             if photo_file and photo_file.filename and allowed_file(photo_file.filename):
-                filename = generate_unique_filename(photo_file.filename)
-                filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                photo_file.save(filepath)
-                _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
-                final_filename = os.path.basename(final_path)
-                
                 from app.models import Photo
-                new_photo = Photo(
-                    filename=final_filename,
-                    caption=caption or '',
-                    work_item_id=work_item.id
-                )
-                db.session.add(new_photo)
+                if is_cloudinary_enabled():
+                    # Upload to Cloudinary
+                    upload_result = upload_image_to_cloudinary(photo_file)
+                    new_photo = Photo(
+                        filename=upload_result['public_id'].split('/')[-1],
+                        caption=caption or '',
+                        work_item_id=work_item.id,
+                        cloudinary_public_id=upload_result['public_id'],
+                        cloudinary_url=upload_result['secure_url']
+                    )
+                    db.session.add(new_photo)
+                else:
+                    # Local storage (fallback)
+                    filename = generate_unique_filename(photo_file.filename)
+                    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                    photo_file.save(filepath)
+                    _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
+                    final_filename = os.path.basename(final_path)
+                    new_photo = Photo(
+                        filename=final_filename,
+                        caption=caption or '',
+                        work_item_id=work_item.id
+                    )
+                    db.session.add(new_photo)
         
         db.session.commit()
         flash('Work item updated successfully!', 'success')

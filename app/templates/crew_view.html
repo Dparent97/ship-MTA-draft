@@ -68,7 +68,7 @@
                     {% for photo in work_item.photos %}
                     <div class="col-md-6 mb-3">
                         <div class="card">
-                            <img src="{{ url_for('serve_upload', filename=photo.filename) }}"
+                            <img src="{{ photo.get_url() }}"
                                  class="card-img-top" alt="Work item photo">
                             {% if photo.caption %}
                             <div class="card-body">

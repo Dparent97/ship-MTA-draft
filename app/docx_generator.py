@@ -2,6 +2,7 @@ from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from app.models import WorkItem
+from app.cloudinary_utils import download_image_from_cloudinary
 from flask import current_app
 import os
 
@@ -85,13 +86,37 @@ def generate_docx(work_item_id):
     for idx, photo in enumerate(work_item.photos, 1):
         doc.add_paragraph()  # Blank line
 
-        # Photo
-        photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename)
-        if os.path.exists(photo_path):
-            try:
-                doc.add_picture(photo_path, width=Inches(4))
-            except Exception as e:
-                doc.add_paragraph(f'[Error loading photo: {photo.filename}]')
+        # Photo - handle both Cloudinary and local storage
+        photo_path = None
+        temp_file = None
+
+        try:
+            if photo.cloudinary_public_id:
+                # Download from Cloudinary to temporary file
+                temp_file = download_image_from_cloudinary(photo.cloudinary_public_id)
+                if temp_file:
+                    photo_path = temp_file
+            else:
+                # Use local storage
+                photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename)
+
+            if photo_path and os.path.exists(photo_path):
+                try:
+                    doc.add_picture(photo_path, width=Inches(4))
+                except Exception as e:
+                    doc.add_paragraph(f'[Error loading photo: {photo.filename}]')
+            else:
+                doc.add_paragraph(f'[Photo not found: {photo.filename}]')
+
+        except Exception as e:
+            doc.add_paragraph(f'[Error loading photo: {str(e)}]')
+        finally:
+            # Clean up temporary file if it was created
+            if temp_file and os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except:
+                    pass  # Ignore cleanup errors
 
         # Caption
         caption_p = doc.add_paragraph()

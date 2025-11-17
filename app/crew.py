@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from app import db
 from app.models import WorkItem, Photo, Comment
 from app.utils import allowed_file, generate_unique_filename, resize_image, get_next_draft_number
+from app.cloudinary_utils import upload_image_to_cloudinary, delete_image_from_cloudinary, is_cloudinary_enabled
 from datetime import datetime
 import os
 
@@ -93,24 +94,33 @@ def submit_form():
             # Process photos with their correct captions
             for idx, (photo_file, caption) in enumerate(valid_photo_pairs):
                 if photo_file and allowed_file(photo_file.filename):
-                    # Generate unique filename
-                    filename = generate_unique_filename(photo_file.filename)
-                    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-
-                    # Save file
-                    photo_file.save(filepath)
-
-                    # Resize image (returns new path if HEIC was converted)
-                    _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
-                    final_filename = os.path.basename(final_path)
-
-                    # Create photo record with the correct caption
-                    photo = Photo(
-                        filename=final_filename,
-                        caption=caption or '',
-                        work_item_id=work_item.id
-                    )
-                    db.session.add(photo)
+                    if is_cloudinary_enabled():
+                        # Upload to Cloudinary
+                        try:
+                            upload_result = upload_image_to_cloudinary(photo_file)
+                            photo = Photo(
+                                filename=upload_result['public_id'].split('/')[-1],  # Use last part as filename
+                                caption=caption or '',
+                                work_item_id=work_item.id,
+                                cloudinary_public_id=upload_result['public_id'],
+                                cloudinary_url=upload_result['secure_url']
+                            )
+                            db.session.add(photo)
+                        except Exception as e:
+                            raise ValueError(f'Error uploading photo {idx + 1} to Cloudinary: {str(e)}')
+                    else:
+                        # Local storage (fallback)
+                        filename = generate_unique_filename(photo_file.filename)
+                        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                        photo_file.save(filepath)
+                        _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
+                        final_filename = os.path.basename(final_path)
+                        photo = Photo(
+                            filename=final_filename,
+                            caption=caption or '',
+                            work_item_id=work_item.id
+                        )
+                        db.session.add(photo)
                 else:
                     raise ValueError(f'Invalid file type for photo {idx + 1}')
 
@@ -222,18 +232,30 @@ def edit_assigned_item(item_id):
 
             for photo_file, caption in zip(new_photo_files, new_photo_captions):
                 if photo_file and photo_file.filename and allowed_file(photo_file.filename):
-                    filename = generate_unique_filename(photo_file.filename)
-                    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                    photo_file.save(filepath)
-                    _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
-                    final_filename = os.path.basename(final_path)
-
-                    new_photo = Photo(
-                        filename=final_filename,
-                        caption=caption or '',
-                        work_item_id=work_item.id
-                    )
-                    db.session.add(new_photo)
+                    if is_cloudinary_enabled():
+                        # Upload to Cloudinary
+                        upload_result = upload_image_to_cloudinary(photo_file)
+                        new_photo = Photo(
+                            filename=upload_result['public_id'].split('/')[-1],
+                            caption=caption or '',
+                            work_item_id=work_item.id,
+                            cloudinary_public_id=upload_result['public_id'],
+                            cloudinary_url=upload_result['secure_url']
+                        )
+                        db.session.add(new_photo)
+                    else:
+                        # Local storage (fallback)
+                        filename = generate_unique_filename(photo_file.filename)
+                        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                        photo_file.save(filepath)
+                        _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
+                        final_filename = os.path.basename(final_path)
+                        new_photo = Photo(
+                            filename=final_filename,
+                            caption=caption or '',
+                            work_item_id=work_item.id
+                        )
+                        db.session.add(new_photo)
 
             db.session.commit()
             flash(f'Work item {work_item.item_number} updated successfully! Status changed from "{old_status}" to "Submitted".', 'success')
@@ -271,10 +293,14 @@ def delete_assigned_photo(item_id, photo_id):
         return redirect(url_for('crew.edit_assigned_item', item_id=item_id))
 
     try:
-        # Delete file from disk
-        photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename)
-        if os.path.exists(photo_path):
-            os.remove(photo_path)
+        # Delete file from Cloudinary or local storage
+        if photo.cloudinary_public_id:
+            delete_image_from_cloudinary(photo.cloudinary_public_id)
+        else:
+            # Local storage fallback
+            photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename)
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
 
         # Delete from database
         db.session.delete(photo)

@@ -97,7 +97,7 @@
                             <div class="card-body">
                                 <div class="row">
                                     <div class="col-md-4 mb-2">
-                                        <img src="{{ url_for('serve_upload', filename=photo.filename) }}"
+                                        <img src="{{ photo.get_url() }}"
                                              class="img-fluid rounded" alt="Work item photo">
                                     </div>
                                     <div class="col-md-8 mb-2">
