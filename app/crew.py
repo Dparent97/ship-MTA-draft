@@ -1,7 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, current_app
-from app import db
+from app import db, limiter
 from app.models import WorkItem, Photo, Comment
 from app.utils import allowed_file, generate_unique_filename, resize_image, get_next_draft_number
+from app.security import (
+    sanitize_text_input, validate_item_number, validate_text_field,
+    validate_file_upload, sanitize_filename
+)
 from datetime import datetime
 import os
 
@@ -22,20 +26,38 @@ def crew_required(f):
 
 @bp.route('/submit', methods=['GET', 'POST'])
 @crew_required
+@limiter.limit("20 per hour")
 def submit_form():
-    """Crew submission form."""
+    """Crew submission form with input validation."""
     if request.method == 'POST':
-        # Get form data
-        item_number = request.form.get('item_number') or get_next_draft_number()
-        location = request.form.get('location')
-        description = request.form.get('description')
-        detail = request.form.get('detail')
-        references = request.form.get('references', '')
+        # Get and sanitize form data
+        item_number = sanitize_text_input(request.form.get('item_number'), max_length=50) or get_next_draft_number()
+        location = sanitize_text_input(request.form.get('location'), max_length=200)
+        description = sanitize_text_input(request.form.get('description'), max_length=500)
+        detail = sanitize_text_input(request.form.get('detail'), max_length=5000)
+        references = sanitize_text_input(request.form.get('references', ''), max_length=1000)
         submitter_name = session.get('crew_name')
 
+        # Validate item number
+        is_valid, error = validate_item_number(item_number)
+        if not is_valid:
+            flash(error, 'danger')
+            return redirect(url_for('crew.submit_form'))
+
         # Validate required fields
-        if not all([location, description, detail]):
-            flash('All required fields must be filled out', 'danger')
+        is_valid, error = validate_text_field(location, 'Location', min_length=2, max_length=200)
+        if not is_valid:
+            flash(error, 'danger')
+            return redirect(url_for('crew.submit_form'))
+
+        is_valid, error = validate_text_field(description, 'Description', min_length=10, max_length=500)
+        if not is_valid:
+            flash(error, 'danger')
+            return redirect(url_for('crew.submit_form'))
+
+        is_valid, error = validate_text_field(detail, 'Detail', min_length=10, max_length=5000)
+        if not is_valid:
+            flash(error, 'danger')
             return redirect(url_for('crew.submit_form'))
 
         # Check if item already exists (duplicate handling)
@@ -73,14 +95,21 @@ def submit_form():
         # Validate photos (now optional)
         photo_files = request.files.getlist('photos')
         photo_captions = request.form.getlist('photo_captions')
-        
+
+        # Sanitize photo captions
+        sanitized_captions = [sanitize_text_input(cap, max_length=500) for cap in photo_captions]
+
         # Filter photos and captions together, keeping them synchronized
         # This ensures each photo file is paired with its correct caption
-        valid_photo_pairs = [
-            (photo, caption) 
-            for photo, caption in zip(photo_files, photo_captions) 
-            if photo and photo.filename
-        ]
+        valid_photo_pairs = []
+        for photo, caption in zip(photo_files, sanitized_captions):
+            if photo and photo.filename:
+                # Validate file upload
+                is_valid, error = validate_file_upload(photo)
+                if not is_valid:
+                    flash(f'Photo validation error: {error}', 'danger')
+                    return redirect(url_for('crew.submit_form'))
+                valid_photo_pairs.append((photo, caption))
 
         if len(valid_photo_pairs) > current_app.config['PHOTO_MAX_COUNT']:
             flash(f'Maximum {current_app.config["PHOTO_MAX_COUNT"]} photos allowed', 'danger')
@@ -173,6 +202,7 @@ def submit_form():
 
 @bp.route('/edit/<int:item_id>', methods=['GET', 'POST'])
 @crew_required
+@limiter.limit("30 per hour")
 def edit_assigned_item(item_id):
     """Edit an assigned work item (crew member must be assigned to it)."""
     crew_name = session.get('crew_name')
@@ -190,10 +220,26 @@ def edit_assigned_item(item_id):
 
     if request.method == 'POST':
         try:
+            # Get and validate input
+            description = sanitize_text_input(request.form.get('description'), max_length=500)
+            detail = sanitize_text_input(request.form.get('detail'), max_length=5000)
+            references = sanitize_text_input(request.form.get('references', ''), max_length=1000)
+
+            # Validate fields
+            is_valid, error = validate_text_field(description, 'Description', min_length=10, max_length=500)
+            if not is_valid:
+                flash(error, 'danger')
+                return redirect(url_for('crew.edit_assigned_item', item_id=item_id))
+
+            is_valid, error = validate_text_field(detail, 'Detail', min_length=10, max_length=5000)
+            if not is_valid:
+                flash(error, 'danger')
+                return redirect(url_for('crew.edit_assigned_item', item_id=item_id))
+
             # Update allowed fields only
-            work_item.description = request.form.get('description')
-            work_item.detail = request.form.get('detail')
-            work_item.references = request.form.get('references', '')
+            work_item.description = description
+            work_item.detail = detail
+            work_item.references = references
 
             # Auto-update tracking fields
             work_item.last_modified_by = crew_name
@@ -214,26 +260,34 @@ def edit_assigned_item(item_id):
             for photo_id, caption in zip(photo_ids, photo_captions):
                 photo = Photo.query.get(int(photo_id))
                 if photo and photo.work_item_id == work_item.id:
-                    photo.caption = caption
+                    # Sanitize caption
+                    photo.caption = sanitize_text_input(caption, max_length=500)
 
             # Handle new photo uploads
             new_photo_files = request.files.getlist('new_photos[]')
             new_photo_captions = request.form.getlist('new_photo_captions[]')
 
             for photo_file, caption in zip(new_photo_files, new_photo_captions):
-                if photo_file and photo_file.filename and allowed_file(photo_file.filename):
-                    filename = generate_unique_filename(photo_file.filename)
-                    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                    photo_file.save(filepath)
-                    _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
-                    final_filename = os.path.basename(final_path)
+                if photo_file and photo_file.filename:
+                    # Validate file upload
+                    is_valid, error = validate_file_upload(photo_file)
+                    if not is_valid:
+                        flash(f'Photo validation error: {error}', 'danger')
+                        return redirect(url_for('crew.edit_assigned_item', item_id=item_id))
 
-                    new_photo = Photo(
-                        filename=final_filename,
-                        caption=caption or '',
-                        work_item_id=work_item.id
-                    )
-                    db.session.add(new_photo)
+                    if allowed_file(photo_file.filename):
+                        filename = generate_unique_filename(photo_file.filename)
+                        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                        photo_file.save(filepath)
+                        _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
+                        final_filename = os.path.basename(final_path)
+
+                        new_photo = Photo(
+                            filename=final_filename,
+                            caption=sanitize_text_input(caption, max_length=500) or '',
+                            work_item_id=work_item.id
+                        )
+                        db.session.add(new_photo)
 
             db.session.commit()
             flash(f'Work item {work_item.item_number} updated successfully! Status changed from "{old_status}" to "Submitted".', 'success')
