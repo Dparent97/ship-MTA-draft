@@ -4,6 +4,9 @@ from app.models import WorkItem, Photo, Comment
 from app.utils import allowed_file, generate_unique_filename, resize_image, get_next_draft_number
 from datetime import datetime
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 bp = Blueprint('crew', __name__, url_prefix='/crew')
@@ -115,16 +118,19 @@ def submit_form():
                     raise ValueError(f'Invalid file type for photo {idx + 1}')
 
             db.session.commit()
-            
+
             if is_update:
+                logger.info(f'Work item updated: {item_number} by {submitter_name}')
                 flash(f'Work item {item_number} updated successfully!', 'success')
             else:
+                logger.info(f'Work item created: {item_number} by {submitter_name} - Location: {location}')
                 flash(f'Work item {item_number} submitted successfully!', 'success')
-            
+
             return redirect(url_for('crew.success', item_number=item_number))
 
         except Exception as e:
             db.session.rollback()
+            logger.error(f'Error submitting work item: {str(e)} - User: {submitter_name}', exc_info=True)
             flash(f'Error submitting form: {str(e)}', 'danger')
             return redirect(url_for('crew.submit_form'))
 
@@ -236,11 +242,13 @@ def edit_assigned_item(item_id):
                     db.session.add(new_photo)
 
             db.session.commit()
+            logger.info(f'Work item edited: {work_item.item_number} by {crew_name} - Status changed from "{old_status}" to "Submitted"')
             flash(f'Work item {work_item.item_number} updated successfully! Status changed from "{old_status}" to "Submitted".', 'success')
             return redirect(url_for('crew.success', item_number=work_item.item_number))
 
         except Exception as e:
             db.session.rollback()
+            logger.error(f'Error updating work item {item_id}: {str(e)} - User: {crew_name}', exc_info=True)
             flash(f'Error updating work item: {str(e)}', 'danger')
             return redirect(url_for('crew.edit_assigned_item', item_id=item_id))
 
@@ -279,9 +287,11 @@ def delete_assigned_photo(item_id, photo_id):
         # Delete from database
         db.session.delete(photo)
         db.session.commit()
+        logger.info(f'Photo deleted: {photo.filename} from work item {work_item.item_number} by {crew_name}')
         flash('Photo deleted successfully', 'success')
     except Exception as e:
         db.session.rollback()
+        logger.error(f'Error deleting photo {photo_id}: {str(e)} - User: {crew_name}', exc_info=True)
         flash(f'Error deleting photo: {str(e)}', 'danger')
 
     return redirect(url_for('crew.edit_assigned_item', item_id=item_id))

@@ -8,6 +8,9 @@ from datetime import datetime
 import os
 import zipfile
 from io import BytesIO
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -57,26 +60,34 @@ def delete_photo(item_id, photo_id):
     """Delete a photo from work item."""
     from app.models import Photo
     photo = Photo.query.get_or_404(photo_id)
-    
+    admin_user = session.get('username', 'admin')
+
     # Verify photo belongs to the work item
     if photo.work_item_id != item_id:
         flash('Invalid photo', 'danger')
         return redirect(url_for('admin.view_item', item_id=item_id))
-    
+
     try:
+        # Get work item for logging
+        work_item = WorkItem.query.get(item_id)
+        photo_filename = photo.filename
+
         # Delete file from disk
         photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename)
         if os.path.exists(photo_path):
             os.remove(photo_path)
-        
+
         # Delete from database
         db.session.delete(photo)
         db.session.commit()
+
+        logger.info(f'Photo deleted by admin: {photo_filename} from work item {work_item.item_number if work_item else item_id} by {admin_user}')
         flash('Photo deleted successfully', 'success')
     except Exception as e:
         db.session.rollback()
+        logger.error(f'Error deleting photo {photo_id}: {str(e)} - Admin: {admin_user}', exc_info=True)
         flash(f'Error deleting photo: {str(e)}', 'danger')
-    
+
     return redirect(url_for('admin.view_item', item_id=item_id))
 
 
@@ -184,11 +195,15 @@ def edit_item(item_id):
                 db.session.add(new_photo)
         
         db.session.commit()
+        admin_user = session.get('username', 'admin')
+        logger.info(f'Work item edited by admin: {work_item.item_number} by {admin_user}')
         flash('Work item updated successfully!', 'success')
     except Exception as e:
         db.session.rollback()
+        admin_user = session.get('username', 'admin')
+        logger.error(f'Error updating work item {item_id}: {str(e)} - Admin: {admin_user}', exc_info=True)
         flash(f'Error updating work item: {str(e)}', 'danger')
-    
+
     return redirect(url_for('admin.view_item', item_id=item_id))
 
 
@@ -232,11 +247,13 @@ def assign_item(item_id):
         if assigned_to and current_app.config.get('ENABLE_NOTIFICATIONS'):
             send_assignment_notification(work_item, assigned_to, revision_notes)
 
+        logger.info(f'Work item assigned: {work_item.item_number} to {assigned_to} - Status: {old_status} -> {new_status} by {admin_name}')
         flash(f'Assignment updated successfully!', 'success')
     except Exception as e:
         db.session.rollback()
+        logger.error(f'Error assigning work item {item_id}: {str(e)} - Admin: {admin_name}', exc_info=True)
         flash(f'Error updating assignment: {str(e)}', 'danger')
-    
+
     return redirect(url_for('admin.view_item', item_id=item_id))
 
 
@@ -245,17 +262,21 @@ def assign_item(item_id):
 def update_status(item_id):
     """Update the status of a work item."""
     work_item = WorkItem.query.get_or_404(item_id)
+    old_status = work_item.status
     new_status = request.form.get('status')
+    admin_user = session.get('username', 'admin')
 
     valid_statuses = current_app.config.get('STATUS_OPTIONS', [
         'Submitted', 'In Review by DP', 'In Review by AL', 'Completed Review'
     ])
-    
+
     if new_status in valid_statuses:
         work_item.status = new_status
         db.session.commit()
+        logger.info(f'Status updated: {work_item.item_number} from {old_status} to {new_status} by {admin_user}')
         flash(f'Status updated to: {new_status}', 'success')
     else:
+        logger.warning(f'Invalid status attempted: {new_status} for item {work_item.item_number} by {admin_user}')
         flash('Invalid status', 'danger')
 
     return redirect(url_for('admin.view_item', item_id=item_id))
@@ -320,18 +341,27 @@ def download_batch():
 def delete_item(item_id):
     """Delete a work item (use with caution)."""
     work_item = WorkItem.query.get_or_404(item_id)
+    item_number = work_item.item_number
+    admin_user = session.get('username', 'admin')
 
-    # Delete associated photos from disk
-    for photo in work_item.photos:
-        photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename)
-        if os.path.exists(photo_path):
-            os.remove(photo_path)
+    try:
+        # Delete associated photos from disk
+        for photo in work_item.photos:
+            photo_path = os.path.join(current_app.config['UPLOAD_FOLDER'], photo.filename)
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
 
-    # Delete from database
-    db.session.delete(work_item)
-    db.session.commit()
+        # Delete from database
+        db.session.delete(work_item)
+        db.session.commit()
 
-    flash(f'Work item {work_item.item_number} deleted', 'success')
+        logger.warning(f'Work item DELETED: {item_number} by admin user {admin_user}')
+        flash(f'Work item {item_number} deleted', 'success')
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error deleting work item {item_id}: {str(e)} - Admin: {admin_user}', exc_info=True)
+        flash(f'Error deleting work item: {str(e)}', 'danger')
+
     return redirect(url_for('admin.dashboard'))
 
 
