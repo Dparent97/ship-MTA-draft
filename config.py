@@ -68,6 +68,14 @@ class Config:
     PHOTO_MIN_COUNT = 0
     PHOTO_MAX_COUNT = 6
 
+    # Cloudinary Configuration (for cloud-based file storage)
+    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
+    CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
+    CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET')
+
+    # Use Cloudinary if credentials are provided, otherwise fall back to local storage
+    USE_CLOUDINARY = bool(CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET)
+
     CREW_PASSWORD = os.environ.get('CREW_PASSWORD') or 'crew350'
 
     ADMIN_USERNAME = os.environ.get('ADMIN_USERNAME') or 'admin'
