@@ -28,6 +28,7 @@
             </div>
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data" id="editWorkItemForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
 
                     <!-- Read-Only Item Number -->
                     <div class="mb-3">

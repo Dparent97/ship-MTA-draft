@@ -1,9 +1,13 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash, send_file, send_from_directory, current_app
-from app import db
+from app import db, limiter
 from app.models import WorkItem, StatusHistory, Comment
 from app.docx_generator import generate_docx, generate_multiple_docx
 from app.utils import format_datetime, allowed_file, generate_unique_filename, resize_image
 from app.notifications import send_assignment_notification
+from app.security import (
+    sanitize_text_input, validate_text_field, validate_status,
+    validate_crew_member, validate_file_upload, escape_sql_like, validate_search_query
+)
 from datetime import datetime
 import os
 import zipfile
@@ -83,31 +87,41 @@ def delete_photo(item_id, photo_id):
 @bp.route('/dashboard')
 @admin_required
 def dashboard():
-    """Admin dashboard showing all work items."""
+    """Admin dashboard showing all work items with search validation."""
     # Get filter parameters
-    status_filter = request.args.get('status', 'all')
-    sort_by = request.args.get('sort', 'date_desc')
+    status_filter = sanitize_text_input(request.args.get('status', 'all'), max_length=50)
+    sort_by = sanitize_text_input(request.args.get('sort', 'date_desc'), max_length=50)
     search_query = request.args.get('search', '').strip()
 
     # Base query
     query = WorkItem.query
 
-    # Apply status filter
+    # Validate and apply status filter
     if status_filter != 'all':
-        query = query.filter_by(status=status_filter)
+        allowed_statuses = current_app.config.get('STATUS_OPTIONS', [])
+        if status_filter in allowed_statuses:
+            query = query.filter_by(status=status_filter)
 
-    # Apply search filter
+    # Validate and apply search filter
     if search_query:
-        search_pattern = f'%{search_query}%'
-        query = query.filter(
-            db.or_(
-                WorkItem.item_number.ilike(search_pattern),
-                WorkItem.description.ilike(search_pattern),
-                WorkItem.location.ilike(search_pattern),
-                WorkItem.submitter_name.ilike(search_pattern),
-                WorkItem.detail.ilike(search_pattern)
+        is_valid, sanitized_query, error = validate_search_query(search_query, max_length=200)
+        if not is_valid:
+            flash(error, 'warning')
+            sanitized_query = ''
+
+        if sanitized_query:
+            # Escape special characters for SQL LIKE
+            safe_query = escape_sql_like(sanitized_query)
+            search_pattern = f'%{safe_query}%'
+            query = query.filter(
+                db.or_(
+                    WorkItem.item_number.ilike(search_pattern),
+                    WorkItem.description.ilike(search_pattern),
+                    WorkItem.location.ilike(search_pattern),
+                    WorkItem.submitter_name.ilike(search_pattern),
+                    WorkItem.detail.ilike(search_pattern)
+                )
             )
-        )
 
     # Apply sorting
     if sort_by == 'date_asc':
@@ -141,47 +155,84 @@ def view_item(item_id):
 
 @bp.route('/edit/<int:item_id>', methods=['POST'])
 @admin_required
+@limiter.limit("30 per hour")
 def edit_item(item_id):
-    """Edit work item details."""
+    """Edit work item details with input validation."""
     work_item = WorkItem.query.get_or_404(item_id)
-    
+
     try:
+        # Get and sanitize input
+        item_number = sanitize_text_input(request.form.get('item_number'), max_length=50)
+        location = sanitize_text_input(request.form.get('location'), max_length=200)
+        description = sanitize_text_input(request.form.get('description'), max_length=500)
+        detail = sanitize_text_input(request.form.get('detail'), max_length=5000)
+        references = sanitize_text_input(request.form.get('references', ''), max_length=1000)
+
+        # Validate fields
+        from app.security import validate_item_number
+        is_valid, error = validate_item_number(item_number)
+        if not is_valid:
+            flash(error, 'danger')
+            return redirect(url_for('admin.view_item', item_id=item_id))
+
+        is_valid, error = validate_text_field(location, 'Location', min_length=2, max_length=200)
+        if not is_valid:
+            flash(error, 'danger')
+            return redirect(url_for('admin.view_item', item_id=item_id))
+
+        is_valid, error = validate_text_field(description, 'Description', min_length=10, max_length=500)
+        if not is_valid:
+            flash(error, 'danger')
+            return redirect(url_for('admin.view_item', item_id=item_id))
+
+        is_valid, error = validate_text_field(detail, 'Detail', min_length=10, max_length=5000)
+        if not is_valid:
+            flash(error, 'danger')
+            return redirect(url_for('admin.view_item', item_id=item_id))
+
         # Update basic fields
-        work_item.item_number = request.form.get('item_number')
-        work_item.location = request.form.get('location')
-        work_item.description = request.form.get('description')
-        work_item.detail = request.form.get('detail')
-        work_item.references = request.form.get('references', '')
+        work_item.item_number = item_number
+        work_item.location = location
+        work_item.description = description
+        work_item.detail = detail
+        work_item.references = references
         
         # Update photo captions
         photo_ids = request.form.getlist('photo_ids[]')
         photo_captions = request.form.getlist('photo_captions[]')
-        
+
         for photo_id, caption in zip(photo_ids, photo_captions):
             from app.models import Photo
             photo = Photo.query.get(int(photo_id))
             if photo and photo.work_item_id == work_item.id:
-                photo.caption = caption
-        
+                photo.caption = sanitize_text_input(caption, max_length=500)
+
         # Handle new photo uploads
         new_photo_files = request.files.getlist('new_photos[]')
         new_photo_captions = request.form.getlist('new_photo_captions[]')
-        
+
         for photo_file, caption in zip(new_photo_files, new_photo_captions):
-            if photo_file and photo_file.filename and allowed_file(photo_file.filename):
-                filename = generate_unique_filename(photo_file.filename)
-                filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
-                photo_file.save(filepath)
-                _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
-                final_filename = os.path.basename(final_path)
-                
-                from app.models import Photo
-                new_photo = Photo(
-                    filename=final_filename,
-                    caption=caption or '',
-                    work_item_id=work_item.id
-                )
-                db.session.add(new_photo)
+            if photo_file and photo_file.filename:
+                # Validate file upload
+                is_valid, error = validate_file_upload(photo_file)
+                if not is_valid:
+                    flash(f'Photo validation error: {error}', 'danger')
+                    return redirect(url_for('admin.view_item', item_id=item_id))
+
+                if allowed_file(photo_file.filename):
+                    filename = generate_unique_filename(photo_file.filename)
+                    filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                    photo_file.save(filepath)
+                    _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
+                    final_filename = os.path.basename(final_path)
+
+                    from app.models import Photo
+                    new_photo = Photo(
+                        filename=final_filename,
+                        caption=sanitize_text_input(caption, max_length=500) or '',
+                        work_item_id=work_item.id
+                    )
+                    db.session.add(new_photo)
         
         db.session.commit()
         flash('Work item updated successfully!', 'success')
@@ -194,15 +245,29 @@ def edit_item(item_id):
 
 @bp.route('/assign/<int:item_id>', methods=['POST'])
 @admin_required
+@limiter.limit("50 per hour")
 def assign_item(item_id):
-    """Assign work item to crew member with revision notes."""
+    """Assign work item to crew member with revision notes and validation."""
     work_item = WorkItem.query.get_or_404(item_id)
-    
+
     old_status = work_item.status
-    new_status = request.form.get('status')
-    assigned_to = request.form.get('assigned_to')
-    revision_notes = request.form.get('revision_notes')
-    admin_name = session.get('crew_name', 'Admin')
+    new_status = sanitize_text_input(request.form.get('status'), max_length=50)
+    assigned_to = sanitize_text_input(request.form.get('assigned_to'), max_length=100)
+    revision_notes = sanitize_text_input(request.form.get('revision_notes'), max_length=2000)
+    admin_name = session.get('crew_name', 'admin')
+
+    # Validate status
+    is_valid, error = validate_status(new_status)
+    if not is_valid:
+        flash(error, 'danger')
+        return redirect(url_for('admin.view_item', item_id=item_id))
+
+    # Validate crew member if assigned
+    if assigned_to:
+        is_valid, error = validate_crew_member(assigned_to)
+        if not is_valid:
+            flash(error, 'danger')
+            return redirect(url_for('admin.view_item', item_id=item_id))
     
     try:
         # Update work item
@@ -337,12 +402,22 @@ def delete_item(item_id):
 
 @bp.route('/save-admin-notes/<int:item_id>', methods=['POST'])
 @admin_required
+@limiter.limit("50 per hour")
 def save_admin_notes(item_id):
-    """Save admin notes for a work item (admin only)."""
+    """Save admin notes for a work item (admin only) with validation."""
     work_item = WorkItem.query.get_or_404(item_id)
 
     try:
-        admin_notes = request.form.get('admin_notes', '')
+        # Sanitize admin notes
+        admin_notes = sanitize_text_input(request.form.get('admin_notes', ''), max_length=5000)
+
+        # Validate if provided
+        if admin_notes:
+            is_valid, error = validate_text_field(admin_notes, 'Admin notes', min_length=1, max_length=5000, required=False)
+            if not is_valid:
+                flash(error, 'danger')
+                return redirect(url_for('admin.view_item', item_id=item_id))
+
         work_item.admin_notes = admin_notes
         work_item.admin_notes_updated_at = datetime.utcnow()
 
