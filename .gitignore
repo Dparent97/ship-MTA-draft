@@ -37,4 +37,9 @@ Thumbs.db
 cookies.txt
 test_cookies.txt
 *_cookies.txt
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.pytest_cache/
 
