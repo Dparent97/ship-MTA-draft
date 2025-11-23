@@ -75,7 +75,8 @@
                     <!-- TAB 1: SUBMIT NEW -->
                     <div class="tab-pane fade show active" id="submit-pane" role="tabpanel">
                         <form method="POST" enctype="multipart/form-data" id="workItemForm">
-                            
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                             <!-- Item Number with Collapsible Reference Section -->
                             <div class="mb-3">
                                 <label for="item_number" class="form-label">

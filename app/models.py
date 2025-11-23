@@ -44,9 +44,20 @@ class Photo(db.Model):
     filename = db.Column(db.String(200), nullable=False)
     caption = db.Column(db.String(500), nullable=False)
     work_item_id = db.Column(db.Integer, db.ForeignKey('work_items.id'), nullable=False)
+    cloudinary_public_id = db.Column(db.String(300), nullable=True)  # For cloud storage
+    cloudinary_url = db.Column(db.String(500), nullable=True)  # Cache the URL
 
     def __repr__(self):
         return f'<Photo {self.filename}>'
+
+    def get_url(self):
+        """Get the URL for this photo (Cloudinary or local)."""
+        if self.cloudinary_url:
+            return self.cloudinary_url
+        else:
+            # Fall back to local storage URL
+            from flask import url_for
+            return url_for('serve_upload', filename=self.filename)
 
 
 class Comment(db.Model):

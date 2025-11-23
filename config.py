@@ -13,6 +13,32 @@ class Config:
     if FLASK_ENV == 'production' and SECRET_KEY == 'dev-secret-key-change-in-production':
         raise ValueError("SECRET_KEY must be set in production environment!")
 
+    # CSRF Protection
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = None  # No time limit for CSRF tokens
+    WTF_CSRF_SSL_STRICT = True  # Require HTTPS in production
+
+    # Session Security
+    SESSION_COOKIE_SECURE = FLASK_ENV == 'production'  # HTTPS only in production
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+
+    # Security Headers
+    SECURITY_HEADERS = {
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'SAMEORIGIN',
+        'X-XSS-Protection': '1; mode=block',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob:; font-src 'self' https://cdn.jsdelivr.net;"
+    }
+
+    # Rate Limiting
+    RATELIMIT_STORAGE_URL = os.environ.get('REDIS_URL') or 'memory://'
+    RATELIMIT_STRATEGY = 'fixed-window'
+    RATELIMIT_DEFAULT = "200 per day, 50 per hour"
+    RATELIMIT_HEADERS_ENABLED = True
+
     # Database Configuration
     database_url = os.environ.get('DATABASE_URL') or 'sqlite:///maintenance.db'
 
@@ -41,6 +67,14 @@ class Config:
     PHOTO_MAX_WIDTH = 576
     PHOTO_MIN_COUNT = 0
     PHOTO_MAX_COUNT = 6
+
+    # Cloudinary Configuration (for cloud-based file storage)
+    CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
+    CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
+    CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET')
+
+    # Use Cloudinary if credentials are provided, otherwise fall back to local storage
+    USE_CLOUDINARY = bool(CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET)
 
     CREW_PASSWORD = os.environ.get('CREW_PASSWORD') or 'crew350'
 
