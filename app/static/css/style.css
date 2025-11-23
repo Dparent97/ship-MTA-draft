@@ -1543,48 +1543,59 @@ a:hover {
 
 @media (max-width: 768px) {
     .zoa-ad-banner {
-        padding: 4px 8px;
-        margin: 8px 0;
-        gap: 6px;
+        padding: 8px;
+        margin: 10px 0;
+        display: flex;
+        align-items: center;
+        text-align: left;
+        gap: 12px;
     }
     .zoa-ad-banner::before {
-        font-size: 5px;
-        padding: 1px 3px;
-        top: 2px;
-        right: 2px;
+        display: none; /* Hide sponsored badge on mobile to save space */
     }
     .zoa-image-container {
-        width: 100%;
-        margin-bottom: 3px;
+        width: 80px;
+        min-width: 80px;
+        margin-bottom: 0;
         display: block;
     }
     .zoa-image {
-        height: auto;
         width: 100%;
-        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
         display: block;
+    }
+    .zoa-text-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
     }
     .zoa-allergy-badge {
         font-size: 5px;
         padding: 1px 3px;
-        bottom: 2px;
+        bottom: 0;
         left: 50%;
         transform: translateX(-50%);
+        width: max-content;
     }
     .zoa-allergy-badge svg {
         display: none;
     }
     .zoa-tagline {
-        font-size: 7px;
+        font-size: 8px;
         margin-bottom: 2px;
     }
     .zoa-message {
-        font-size: 8px;
-        margin-bottom: 3px;
+        font-size: 10px;
+        margin-bottom: 4px;
+        line-height: 1.2;
     }
     .zoa-cta-button {
         padding: 4px 12px;
-        font-size: 7px;
+        font-size: 8px;
         border-radius: 10px;
+        align-self: flex-start;
     }
 }
