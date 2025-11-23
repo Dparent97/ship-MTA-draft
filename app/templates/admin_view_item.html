@@ -301,6 +301,7 @@
 {% block extra_js %}
 <script>
 let newPhotoCount = 0;
+let isSubmitting = false;
 
 // Add class to body for mobile fixed bottom padding
 if (window.innerWidth < 768) {
@@ -344,5 +345,174 @@ document.getElementById('addNewPhotoBtn').addEventListener('click', function() {
     `;
     document.getElementById('newPhotoContainer').appendChild(photoDiv);
 });
+
+// Helper function to collect main form data
+function collectMainFormData() {
+    const editForm = document.getElementById('editForm');
+    const formData = new FormData();
+    
+    // Manually add all form fields
+    formData.append('item_number', document.getElementById('item_number').value);
+    formData.append('location', document.getElementById('location').value);
+    formData.append('description', document.getElementById('description').value);
+    formData.append('detail', document.getElementById('detail').value);
+    formData.append('references', document.getElementById('references').value);
+    
+    // Add photo IDs and captions
+    const photoIds = document.querySelectorAll('input[name="photo_ids[]"]');
+    const photoCaptions = document.querySelectorAll('input[name="photo_captions[]"]');
+    photoIds.forEach(input => formData.append('photo_ids[]', input.value));
+    photoCaptions.forEach(input => formData.append('photo_captions[]', input.value));
+    
+    // Add new photos
+    const newPhotoInputs = document.querySelectorAll('input[name="new_photos[]"]');
+    const newPhotoCaptions = document.querySelectorAll('input[name="new_photo_captions[]"]');
+    newPhotoInputs.forEach(input => {
+        if (input.files && input.files[0]) {
+            formData.append('new_photos[]', input.files[0]);
+        }
+    });
+    newPhotoCaptions.forEach(input => formData.append('new_photo_captions[]', input.value));
+    
+    return formData;
+}
+
+// Helper function to disable all submit buttons
+function disableAllButtons() {
+    const buttons = document.querySelectorAll('button[type="submit"]');
+    buttons.forEach(btn => {
+        btn.dataset.originalText = btn.innerHTML;
+        btn.disabled = true;
+        const loadingSpinner = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>';
+        btn.innerHTML = loadingSpinner + 'Saving...';
+    });
+}
+
+// Helper function to re-enable all submit buttons
+function enableAllButtons() {
+    const buttons = document.querySelectorAll('button[type="submit"]');
+    buttons.forEach(btn => {
+        btn.disabled = false;
+        if (btn.dataset.originalText) {
+            btn.innerHTML = btn.dataset.originalText;
+        }
+    });
+}
+
+// Intercept main form submission (Save All Changes)
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (isSubmitting) return;
+    isSubmitting = true;
+    
+    disableAllButtons();
+    
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            return response.text().then(text => {
+                throw new Error('Save failed: ' + text);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an error saving changes. Please try again.');
+        isSubmitting = false;
+        enableAllButtons();
+    });
+});
+
+// Intercept assignment form submission
+const assignmentForm = document.querySelector('form[action*="/admin/assign/"]');
+if (assignmentForm) {
+    assignmentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (isSubmitting) return;
+        isSubmitting = true;
+        
+        disableAllButtons();
+        
+        // Collect both main form data and assignment data
+        const mainFormData = collectMainFormData();
+        const assignmentData = new FormData(this);
+        
+        // Merge assignment-specific fields into main form data
+        assignmentData.forEach((value, key) => {
+            mainFormData.set(key, value);
+        });
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: mainFormData
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                return response.text().then(text => {
+                    throw new Error('Assignment update failed: ' + text);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('There was an error updating assignment. Please try again.');
+            isSubmitting = false;
+            enableAllButtons();
+        });
+    });
+}
+
+// Intercept admin notes form submission
+const adminNotesForm = document.querySelector('form[action*="/admin/save-admin-notes/"]');
+if (adminNotesForm) {
+    adminNotesForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (isSubmitting) return;
+        isSubmitting = true;
+        
+        disableAllButtons();
+        
+        // Collect both main form data and admin notes
+        const mainFormData = collectMainFormData();
+        const notesData = new FormData(this);
+        
+        // Merge admin notes into main form data
+        notesData.forEach((value, key) => {
+            mainFormData.set(key, value);
+        });
+        
+        fetch(this.action, {
+            method: 'POST',
+            body: mainFormData
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                return response.text().then(text => {
+                    throw new Error('Admin notes save failed: ' + text);
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('There was an error saving admin notes. Please try again.');
+            isSubmitting = false;
+            enableAllButtons();
+        });
+    });
+}
 </script>
 {% endblock %}

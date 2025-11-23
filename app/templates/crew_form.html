@@ -307,9 +307,23 @@ document.getElementById('draft_select').addEventListener('change', function() {
     }
 });
 
-// Form submission - append photos to form data
+// Form submission - append photos to form data with double-submit protection
+let isSubmitting = false;
+
 document.getElementById('workItemForm').addEventListener('submit', function(e) {
     e.preventDefault();
+
+    // Prevent double submission
+    if (isSubmitting) {
+        return;
+    }
+    isSubmitting = true;
+
+    // Get submit button and disable it
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalBtnText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Submitting...';
 
     // Create FormData from the form
     const formData = new FormData(this);
@@ -341,6 +355,11 @@ document.getElementById('workItemForm').addEventListener('submit', function(e) {
     .catch(error => {
         console.error('Error:', error);
         alert('There was an error submitting the form. Please try again.');
+        
+        // Re-enable button on error
+        isSubmitting = false;
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalBtnText;
     });
 });
 </script>

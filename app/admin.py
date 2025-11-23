@@ -195,7 +195,7 @@ def edit_item(item_id):
 @bp.route('/assign/<int:item_id>', methods=['POST'])
 @admin_required
 def assign_item(item_id):
-    """Assign work item to crew member with revision notes."""
+    """Assign work item to crew member with revision notes and save all main form fields."""
     work_item = WorkItem.query.get_or_404(item_id)
     
     old_status = work_item.status
@@ -205,7 +205,44 @@ def assign_item(item_id):
     admin_name = session.get('crew_name', 'Admin')
     
     try:
-        # Update work item
+        # Update main form fields (same as edit_item)
+        work_item.item_number = request.form.get('item_number')
+        work_item.location = request.form.get('location')
+        work_item.description = request.form.get('description')
+        work_item.detail = request.form.get('detail')
+        work_item.references = request.form.get('references', '')
+        
+        # Update photo captions
+        photo_ids = request.form.getlist('photo_ids[]')
+        photo_captions = request.form.getlist('photo_captions[]')
+        
+        for photo_id, caption in zip(photo_ids, photo_captions):
+            from app.models import Photo
+            photo = Photo.query.get(int(photo_id))
+            if photo and photo.work_item_id == work_item.id:
+                photo.caption = caption
+        
+        # Handle new photo uploads
+        new_photo_files = request.files.getlist('new_photos[]')
+        new_photo_captions = request.form.getlist('new_photo_captions[]')
+        
+        for photo_file, caption in zip(new_photo_files, new_photo_captions):
+            if photo_file and photo_file.filename and allowed_file(photo_file.filename):
+                filename = generate_unique_filename(photo_file.filename)
+                filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                photo_file.save(filepath)
+                _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
+                final_filename = os.path.basename(final_path)
+                
+                from app.models import Photo
+                new_photo = Photo(
+                    filename=final_filename,
+                    caption=caption or '',
+                    work_item_id=work_item.id
+                )
+                db.session.add(new_photo)
+        
+        # Update assignment fields
         work_item.status = new_status
         work_item.assigned_to = assigned_to if assigned_to else None
         work_item.revision_notes = revision_notes
@@ -228,11 +265,20 @@ def assign_item(item_id):
         
         db.session.commit()
 
+        # Auto-generate backup document if status changed to "Completed Review"
+        if new_status == 'Completed Review' and old_status != new_status:
+            try:
+                generate_docx(item_id)
+                flash(f'Assignment updated successfully! Backup document generated.', 'success')
+            except Exception as doc_error:
+                flash(f'Assignment updated successfully! (Warning: Document generation failed: {str(doc_error)})', 'warning')
+        else:
+            flash(f'Assignment updated successfully!', 'success')
+
         # Send SMS notification if enabled and crew member is assigned
         if assigned_to and current_app.config.get('ENABLE_NOTIFICATIONS'):
             send_assignment_notification(work_item, assigned_to, revision_notes)
 
-        flash(f'Assignment updated successfully!', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating assignment: {str(e)}', 'danger')
@@ -338,16 +384,54 @@ def delete_item(item_id):
 @bp.route('/save-admin-notes/<int:item_id>', methods=['POST'])
 @admin_required
 def save_admin_notes(item_id):
-    """Save admin notes for a work item (admin only)."""
+    """Save admin notes for a work item and all main form fields (admin only)."""
     work_item = WorkItem.query.get_or_404(item_id)
 
     try:
+        # Update main form fields (same as edit_item)
+        work_item.item_number = request.form.get('item_number')
+        work_item.location = request.form.get('location')
+        work_item.description = request.form.get('description')
+        work_item.detail = request.form.get('detail')
+        work_item.references = request.form.get('references', '')
+        
+        # Update photo captions
+        photo_ids = request.form.getlist('photo_ids[]')
+        photo_captions = request.form.getlist('photo_captions[]')
+        
+        for photo_id, caption in zip(photo_ids, photo_captions):
+            from app.models import Photo
+            photo = Photo.query.get(int(photo_id))
+            if photo and photo.work_item_id == work_item.id:
+                photo.caption = caption
+        
+        # Handle new photo uploads
+        new_photo_files = request.files.getlist('new_photos[]')
+        new_photo_captions = request.form.getlist('new_photo_captions[]')
+        
+        for photo_file, caption in zip(new_photo_files, new_photo_captions):
+            if photo_file and photo_file.filename and allowed_file(photo_file.filename):
+                filename = generate_unique_filename(photo_file.filename)
+                filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                photo_file.save(filepath)
+                _, _, final_path = resize_image(filepath, current_app.config['PHOTO_MAX_WIDTH'])
+                final_filename = os.path.basename(final_path)
+                
+                from app.models import Photo
+                new_photo = Photo(
+                    filename=final_filename,
+                    caption=caption or '',
+                    work_item_id=work_item.id
+                )
+                db.session.add(new_photo)
+        
+        # Update admin notes
         admin_notes = request.form.get('admin_notes', '')
         work_item.admin_notes = admin_notes
         work_item.admin_notes_updated_at = datetime.utcnow()
 
         db.session.commit()
-        flash('Admin notes saved successfully!', 'success')
+        flash('Admin notes and all changes saved successfully!', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error saving admin notes: {str(e)}', 'danger')
