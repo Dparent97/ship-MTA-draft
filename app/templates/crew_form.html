@@ -217,7 +217,7 @@
                                         <td>{{ item.photos|length }}</td>
                                         <td>
                                             {% if item.submitter_name == crew_name or item.assigned_to == crew_name %}
-                                                {% if item.status in ['Needs Revision', 'Awaiting Photos'] %}
+                                                {% if item.status in ['Submitted', 'Needs Revision', 'Awaiting Photos'] %}
                                                 <a href="{{ url_for('crew.edit_assigned_item', item_id=item.id) }}" 
                                                    class="btn btn-sm btn-warning">Edit</a>
                                                 {% else %}

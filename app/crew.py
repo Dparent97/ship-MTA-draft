@@ -58,7 +58,8 @@ def submit_form():
             work_item = WorkItem(
                 item_number=item_number,
                 submitter_name=submitter_name,
-                original_submitter=submitter_name
+                original_submitter=submitter_name,
+                assigned_to=submitter_name  # Auto-assign to submitter
             )
 
         # Update/set all fields
@@ -136,7 +137,7 @@ def submit_form():
     try:
         assigned_items = WorkItem.query.filter_by(
             assigned_to=crew_name
-        ).filter(WorkItem.status.in_(['Needs Revision', 'Awaiting Photos'])).all()
+        ).filter(WorkItem.status.in_(['Submitted', 'Needs Revision', 'Awaiting Photos'])).all()
     except Exception as e:
         print(f"Error querying assigned items: {e}")
         assigned_items = []
@@ -178,13 +179,13 @@ def edit_assigned_item(item_id):
     crew_name = session.get('crew_name')
     work_item = WorkItem.query.get_or_404(item_id)
 
-    # Permission check: Verify this item is assigned to the current crew member
-    if work_item.assigned_to != crew_name:
-        flash('You do not have permission to edit this item. It must be assigned to you.', 'danger')
+    # Permission check: Verify this item is assigned to the current crew member OR they are the original submitter
+    if work_item.submitter_name != crew_name and work_item.assigned_to != crew_name:
+        flash('You do not have permission to edit this item. Only the original submitter or assigned crew member can edit.', 'danger')
         return redirect(url_for('crew.submit_form'))
 
-    # Only allow editing if status is "Needs Revision" or "Awaiting Photos"
-    if work_item.status not in ['Needs Revision', 'Awaiting Photos']:
+    # Only allow editing if status is "Submitted", "Needs Revision" or "Awaiting Photos"
+    if work_item.status not in ['Submitted', 'Needs Revision', 'Awaiting Photos']:
         flash(f'This item cannot be edited. Current status: {work_item.status}', 'warning')
         return redirect(url_for('crew.submit_form'))
 
@@ -295,8 +296,8 @@ def view_item(item_id):
     crew_name = session.get('crew_name')
     
     # Determine if this user can edit (must match edit_assigned_item permissions)
-    can_edit = (work_item.assigned_to == crew_name) and \
-               (work_item.status in ['Needs Revision', 'Awaiting Photos'])
+    can_edit = (work_item.submitter_name == crew_name or work_item.assigned_to == crew_name) and \
+               (work_item.status in ['Submitted', 'Needs Revision', 'Awaiting Photos'])
     
     return render_template('crew_view.html',
                          work_item=work_item,

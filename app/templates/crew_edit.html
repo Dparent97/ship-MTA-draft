@@ -23,7 +23,7 @@
         <!-- Edit Form Card -->
         <div class="card shadow">
             <div class="card-header bg-warning text-dark">
-                <h3 class="mb-0">Edit Assigned Work Item</h3>
+                <h3 class="mb-0">Edit Work Item</h3>
                 <small>Editing as: <strong>{{ crew_name }}</strong> | Status: <span class="badge bg-dark">{{ work_item.status }}</span></small>
             </div>
             <div class="card-body">
@@ -35,7 +35,7 @@
                         <input type="text" class="form-control" value="{{ work_item.item_number }}"
                                readonly style="background-color: #e9ecef; cursor: not-allowed;">
                         <small class="form-text text-muted">
-                            This field cannot be modified when editing an assigned item.
+                            This field cannot be modified after submission.
                         </small>
                     </div>
 
@@ -45,7 +45,7 @@
                         <input type="text" class="form-control" value="{{ work_item.location }}"
                                readonly style="background-color: #e9ecef; cursor: not-allowed;">
                         <small class="form-text text-muted">
-                            This field cannot be modified when editing an assigned item.
+                            This field cannot be modified after submission.
                         </small>
                     </div>
 
