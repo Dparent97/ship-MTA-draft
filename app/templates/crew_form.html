@@ -5,6 +5,18 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-lg-10">
+        <!-- OBNOXIOUS ZOA ENERGY AD -->
+        <div class="zoa-ad-banner" onclick="window.open('https://zoaenergy.com', '_blank')">
+            <div class="zoa-image-container">
+                <img src="{{ url_for('static', filename='images/zoa-hero.png') }}" alt="ZOA Energy" class="zoa-image">
+                <div class="zoa-allergy-badge show">✓ ALLERGY FRIENDLY</div>
+            </div>
+            <div class="zoa-tagline">ZERO SUGAR • REAL ENERGY</div>
+            <div class="zoa-message" id="zoa-message">
+                ⚓ Fuel your watch with ZOA Energy
+            </div>
+            <span class="zoa-cta-button">🔥 SHOP NOW 🔥</span>
+        </div>
         <!-- Assigned Items Banner (Always Visible) -->
         {% if assigned_items %}
         <div class="card shadow mb-4">
