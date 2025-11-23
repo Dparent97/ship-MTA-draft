@@ -9,7 +9,7 @@ class WorkItem(db.Model):
     item_number = db.Column(db.String(50), unique=True, nullable=False)
     location = db.Column(db.String(200), nullable=False)
     ns_equipment = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.String(500), nullable=False)
+    description = db.Column(db.String(2000), nullable=False)  # Increased from 500 to 2000
     detail = db.Column(db.Text, nullable=False)
     references = db.Column(db.Text)
     submitter_name = db.Column(db.String(100), nullable=False)
