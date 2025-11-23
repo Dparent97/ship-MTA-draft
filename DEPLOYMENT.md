@@ -105,23 +105,54 @@ For better performance and reliability in production:
 
 ## Persistent File Storage
 
-The application needs persistent storage for uploaded photos and generated documents.
+⚠️ **CRITICAL: Railway's filesystem is ephemeral. Without a mounted volume, all uploaded photos will be deleted on every deployment/restart!**
 
-### Set Up Railway Volume
+The application stores uploaded photos and generated documents in persistent storage. You **MUST** configure a Railway volume or photos will disappear.
+
+### Set Up Railway Volume (REQUIRED)
+
+**Recommended Setup: Single Volume** (Simpler to manage)
 
 1. In Railway dashboard, go to your service
-2. Click "Settings" → "Volumes"
-3. Add volumes for:
-   - **Mount Path:** `/app/uploads` (for photo uploads)
-   - **Mount Path:** `/app/generated_docs` (for generated Word documents)
+2. Click "Settings" → "Volumes"  
+3. Click "Add Volume"
+4. Configure the volume:
+   - **Mount Path:** `/app/data`
+   - Click "Add"
 
-Alternatively, if using a single volume:
-- **Mount Path:** `/app/data`
-- Update environment variables:
-  ```bash
-  railway variables set UPLOAD_FOLDER=/app/data/uploads
-  railway variables set GENERATED_DOCS_FOLDER=/app/data/generated_docs
-  ```
+5. **That's it!** The app is already configured to use `/app/data/uploads` for photos and `/app/data/generated_docs` for documents.
+
+**What happens:**
+- Photos save to: `/app/data/uploads/` (persistent ✓)
+- Generated docs save to: `/app/data/generated_docs/` (persistent ✓)
+- Database (SQLite) saves to: `/app/data/maintenance.db` (persistent ✓)
+
+**Alternative Setup: Separate Volumes** (More complex, not recommended)
+
+If you prefer separate volumes for uploads and docs:
+
+1. Add two volumes:
+   - **Mount Path:** `/app/uploads`
+   - **Mount Path:** `/app/generated_docs`
+
+2. Set environment variables to override defaults:
+   ```bash
+   railway variables set UPLOAD_FOLDER=/app/uploads
+   railway variables set GENERATED_DOCS_FOLDER=/app/generated_docs
+   ```
+
+### Verify Volume Configuration
+
+After adding the volume, check the logs on next deployment:
+- You should see directories created: `uploads` and `generated_docs`
+- No errors about creating directories
+
+**Testing Photo Persistence:**
+1. Upload a photo to a work item
+2. Note the photo displays correctly
+3. Trigger a deployment or restart the service
+4. Verify the photo still displays (not a broken icon)
+5. ✓ If photos persist, volume is configured correctly!
 
 ## Optional: Email Notifications
 
@@ -202,13 +233,32 @@ railway up
 
 ### File Upload Issues
 
+**Photos disappearing after upload / showing as broken icons:**
+
+This happens when the volume is not mounted correctly. Railway's filesystem is ephemeral - files are wiped on restart.
+
+**Solution:**
+1. Check Railway dashboard → Settings → Volumes
+2. Ensure you have a volume mounted at `/app/data`
+3. If no volume exists, add one (see "Persistent File Storage" section above)
+4. After adding volume, redeploy the application
+5. **Important:** Any photos uploaded BEFORE adding the volume are permanently lost and must be re-uploaded
+
+**Photos upload but won't display:**
+
 1. **Verify volumes are mounted:**
    - Check Railway dashboard → Settings → Volumes
-   - Ensure mount paths match `UPLOAD_FOLDER` and `GENERATED_DOCS_FOLDER`
+   - Volume should be mounted at `/app/data` (recommended)
+   - Or ensure mount paths match `UPLOAD_FOLDER` and `GENERATED_DOCS_FOLDER` env vars
 
 2. **Check folder permissions:**
-   - Logs should show folder creation on startup
-   - If permission errors, verify volume mount paths
+   - View deployment logs: `railway logs`
+   - Look for directory creation messages on startup
+   - If permission errors appear, verify volume mount paths
+
+3. **Check file paths in database:**
+   - Photos should reference filenames only (not full paths)
+   - Example: `abc123.jpg` not `/app/uploads/abc123.jpg`
 
 ### Out of Memory
 
@@ -290,11 +340,12 @@ Configure in Railway:
 - [ ] Railway project created
 - [ ] Environment variables configured (FLASK_ENV, SECRET_KEY, passwords)
 - [ ] Database option selected (SQLite with volume OR PostgreSQL)
-- [ ] Volumes configured for file uploads
+- [ ] **CRITICAL:** Volume mounted at `/app/data` (prevents photo loss)
 - [ ] Application deployed and accessible
 - [ ] Admin login tested
 - [ ] Crew login tested
-- [ ] File upload tested
+- [ ] Photo upload tested
+- [ ] **CRITICAL:** Photo persistence tested (upload photo, restart service, verify photo still displays)
 - [ ] Custom domain configured (optional)
 - [ ] Email notifications configured (optional)
 
