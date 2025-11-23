@@ -38,3 +38,11 @@ cookies.txt
 test_cookies.txt
 *_cookies.txt
 
+
+# Multi-Agent Workflow
+metrics.json
+quality_audit_report.txt
+merge_order.txt
+merge_order.json
+DASHBOARD.md
+.coverage.json
