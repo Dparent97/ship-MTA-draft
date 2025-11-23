@@ -1539,27 +1539,45 @@ a:hover {
 
 @media (max-width: 768px) {
     .zoa-ad-banner {
-        padding: 8px;
-        margin: 10px 0;
+        padding: 4px;
+        margin: 8px 0;
+        gap: 6px;
     }
-    .zoa-image {
-        height: 40px;
+    .zoa-ad-banner::before {
+        font-size: 5px;
+        padding: 1px 3px;
+        top: 2px;
+        right: 2px;
+    }
+    .zoa-image-container {
+        width: 45px;
+        height: 30px;
+    }
+    .zoa-logo {
+        height: 100%;
+        width: 100%;
     }
     .zoa-allergy-badge {
-        font-size: 5px;
-        padding: 1px 4px;
-        bottom: -2px;
+        font-size: 4px;
+        padding: 0px 2px;
+        bottom: 1px;
+        left: 1px;
+    }
+    .zoa-allergy-badge svg {
+        width: 5px;
+        height: 5px;
     }
     .zoa-tagline {
-        font-size: 8px;
-        margin-bottom: 4px;
+        font-size: 6px;
+        margin-bottom: 2px;
     }
     .zoa-message {
-        font-size: 10px;
-        margin-bottom: 6px;
+        font-size: 7px;
+        margin-bottom: 3px;
     }
     .zoa-cta-button {
-        padding: 5px 16px;
-        font-size: 9px;
+        padding: 3px 10px;
+        font-size: 6px;
+        border-radius: 10px;
     }
 }
