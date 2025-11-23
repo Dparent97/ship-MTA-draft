@@ -378,13 +378,17 @@ function collectMainFormData() {
 }
 
 // Helper function to disable all submit buttons
-function disableAllButtons() {
+function disableAllButtons(photoCount = 0) {
     const buttons = document.querySelectorAll('button[type="submit"]');
     buttons.forEach(btn => {
         btn.dataset.originalText = btn.innerHTML;
         btn.disabled = true;
         const loadingSpinner = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>';
-        btn.innerHTML = loadingSpinner + 'Saving...';
+        if (photoCount > 0) {
+            btn.innerHTML = loadingSpinner + `Uploading ${photoCount} photo(s)... This may take a few minutes...`;
+        } else {
+            btn.innerHTML = loadingSpinner + 'Saving...';
+        }
     });
 }
 
@@ -406,15 +410,25 @@ document.getElementById('editForm').addEventListener('submit', function(e) {
     if (isSubmitting) return;
     isSubmitting = true;
     
-    disableAllButtons();
+    // Count photos being uploaded
+    const newPhotoInputs = document.querySelectorAll('input[name="new_photos[]"]');
+    const photoCount = Array.from(newPhotoInputs).filter(input => input.files && input.files[0]).length;
+    
+    disableAllButtons(photoCount);
     
     const formData = new FormData(this);
     
+    // Add AbortController with 5-minute timeout for photo uploads
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
+    
     fetch(this.action, {
         method: 'POST',
-        body: formData
+        body: formData,
+        signal: controller.signal
     })
     .then(response => {
+        clearTimeout(timeoutId);
         if (response.ok) {
             window.location.reload();
         } else {
@@ -424,8 +438,13 @@ document.getElementById('editForm').addEventListener('submit', function(e) {
         }
     })
     .catch(error => {
+        clearTimeout(timeoutId);
         console.error('Error:', error);
-        alert('There was an error saving changes. Please try again.');
+        if (error.name === 'AbortError') {
+            alert('Upload timed out. Please try with fewer photos or smaller file sizes.');
+        } else {
+            alert('There was an error saving changes. Please try again.');
+        }
         isSubmitting = false;
         enableAllButtons();
     });
@@ -440,7 +459,11 @@ if (assignmentForm) {
         if (isSubmitting) return;
         isSubmitting = true;
         
-        disableAllButtons();
+        // Count photos being uploaded
+        const newPhotoInputs = document.querySelectorAll('input[name="new_photos[]"]');
+        const photoCount = Array.from(newPhotoInputs).filter(input => input.files && input.files[0]).length;
+        
+        disableAllButtons(photoCount);
         
         // Collect both main form data and assignment data
         const mainFormData = collectMainFormData();
@@ -451,11 +474,17 @@ if (assignmentForm) {
             mainFormData.set(key, value);
         });
         
+        // Add AbortController with 5-minute timeout for photo uploads
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
+        
         fetch(this.action, {
             method: 'POST',
-            body: mainFormData
+            body: mainFormData,
+            signal: controller.signal
         })
         .then(response => {
+            clearTimeout(timeoutId);
             if (response.ok) {
                 window.location.reload();
             } else {
@@ -465,8 +494,13 @@ if (assignmentForm) {
             }
         })
         .catch(error => {
+            clearTimeout(timeoutId);
             console.error('Error:', error);
-            alert('There was an error updating assignment. Please try again.');
+            if (error.name === 'AbortError') {
+                alert('Upload timed out. Please try with fewer photos or smaller file sizes.');
+            } else {
+                alert('There was an error updating assignment. Please try again.');
+            }
             isSubmitting = false;
             enableAllButtons();
         });
@@ -482,7 +516,11 @@ if (adminNotesForm) {
         if (isSubmitting) return;
         isSubmitting = true;
         
-        disableAllButtons();
+        // Count photos being uploaded
+        const newPhotoInputs = document.querySelectorAll('input[name="new_photos[]"]');
+        const photoCount = Array.from(newPhotoInputs).filter(input => input.files && input.files[0]).length;
+        
+        disableAllButtons(photoCount);
         
         // Collect both main form data and admin notes
         const mainFormData = collectMainFormData();
@@ -493,11 +531,17 @@ if (adminNotesForm) {
             mainFormData.set(key, value);
         });
         
+        // Add AbortController with 5-minute timeout for photo uploads
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes
+        
         fetch(this.action, {
             method: 'POST',
-            body: mainFormData
+            body: mainFormData,
+            signal: controller.signal
         })
         .then(response => {
+            clearTimeout(timeoutId);
             if (response.ok) {
                 window.location.reload();
             } else {
@@ -507,8 +551,13 @@ if (adminNotesForm) {
             }
         })
         .catch(error => {
+            clearTimeout(timeoutId);
             console.error('Error:', error);
-            alert('There was an error saving admin notes. Please try again.');
+            if (error.name === 'AbortError') {
+                alert('Upload timed out. Please try with fewer photos or smaller file sizes.');
+            } else {
+                alert('There was an error saving admin notes. Please try again.');
+            }
             isSubmitting = false;
             enableAllButtons();
         });
